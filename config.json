@@ -1,0 +1,7 @@
+{
+  "listen_addr": ":8083",
+  "upstreams": {
+    "bookmarks.local": "http://127.0.0.1:8081",
+    "webhook.local": "http://127.0.0.1:8082"
+  }
+}
