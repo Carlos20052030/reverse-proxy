@@ -1,10 +1,13 @@
 package proxy
 
 import (
+	"bytes"
 	"context"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -208,5 +211,84 @@ func TestProxy_Returns504OnUpstreamTimeout(t *testing.T) {
 
 	if rr.Code != http.StatusGatewayTimeout {
 		t.Errorf("expected status 504, got %d", rr.Code)
+	}
+}
+
+func TestProxy_StructuredLogging(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer upstream.Close()
+
+	resolver := NewMapResolver(map[string]string{
+		"bookmarks.local": upstream.URL,
+	})
+
+	// Create a buffer to capture the logs and a JSON logger that writes to it
+	var logBuf bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&logBuf, nil))
+
+	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, logger, 1*time.Second)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "bookmarks.local"
+	req.RemoteAddr = "192.168.1.100:54321"
+
+	rr := httptest.NewRecorder()
+	proxy.ServeHTTP(rr, req)
+
+	// Assert the logs
+	logOutput := logBuf.String()
+
+	// Simple string checks for the JSON fields
+	expectedFields := []string{
+		`"method":"GET"`,
+		`"path":"/api/test"`,
+		`"status":200`,
+		`"tenant":"bookmarks.local"`,
+		`"duration_ms"`,
+	}
+
+	for _, field := range expectedFields {
+		if !strings.Contains(logOutput, field) {
+			t.Errorf("expected log output to contain %q, got:\n%s", field, logOutput)
+		}
+	}
+}
+
+func TestProxy_MetricsEndpoint(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer upstream.Close()
+
+	resolver := NewMapResolver(map[string]string{
+		"bookmarks.local": upstream.URL,
+	})
+
+	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil, 1*time.Second)
+
+	// 1. Make a regular request to the upstream
+	req1 := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req1.Host = "bookmarks.local"
+	rr1 := httptest.NewRecorder()
+	proxy.ServeHTTP(rr1, req1)
+
+	// 2. Make a request to the metrics endpoint
+	req2 := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	req2.Host = "bookmarks.local"
+	rr2 := httptest.NewRecorder()
+	proxy.ServeHTTP(rr2, req2)
+
+	// 3. Check the metrics response
+	if rr2.Code != http.StatusOK {
+		t.Fatalf("expected status 200 for /metrics, got %d", rr2.Code)
+	}
+
+	body, _ := io.ReadAll(rr2.Body)
+	logOutput := string(body)
+
+	if !strings.Contains(logOutput, "reverse_proxy_requests_total") {
+		t.Errorf("expected metrics output to contain 'reverse_proxy_requests_total', got:\n%s", logOutput)
 	}
 }
