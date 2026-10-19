@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 // FakeRateLimiter is a manual fake used to test rate limiting logic without time dependencies.
@@ -42,8 +43,7 @@ func TestProxy_RoutesByHost(t *testing.T) {
 		"bookmarks.local": upstream.URL,
 	})
 
-	// Updated to include the FakeRateLimiter and nil logger
-	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil)
+	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil, 1*time.Second)
 
 	t.Run("routes to known host", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
@@ -99,8 +99,7 @@ func TestProxy_Headers(t *testing.T) {
 		"bookmarks.local": upstream.URL,
 	})
 
-	// Updated to include the FakeRateLimiter and nil logger
-	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil)
+	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil, 1*time.Second)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	req.Host = "bookmarks.local"
@@ -126,8 +125,8 @@ func TestProxy_RateLimiting(t *testing.T) {
 		"bookmarks.local": upstream.URL,
 	})
 
-	// Pass a limiter that always blocks
-	proxy := NewProxy(resolver, &FakeRateLimiter{allow: false}, nil)
+	// allow: false = força o bloqueio para testar o 429
+	proxy := NewProxy(resolver, &FakeRateLimiter{allow: false}, nil, 1*time.Second)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	req.Host = "bookmarks.local"
@@ -135,7 +134,6 @@ func TestProxy_RateLimiting(t *testing.T) {
 	rr := httptest.NewRecorder()
 	proxy.ServeHTTP(rr, req)
 
-	// The proxy must return 429 Too Many Requests when the limiter blocks
 	if rr.Code != http.StatusTooManyRequests {
 		t.Errorf("expected status 429, got %d", rr.Code)
 	}
@@ -152,23 +150,63 @@ func TestProxy_SecureClientIPExtraction(t *testing.T) {
 	})
 
 	spyLimiter := &SpyRateLimiter{allow: true}
-	proxy := NewProxy(resolver, spyLimiter, nil)
+	// Passa o spyLimiter para podermos inspecionar o lastKey
+	proxy := NewProxy(resolver, spyLimiter, nil, 1*time.Second)
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Host = "bookmarks.local"
 
-	// 1. Simulate a real connection. httptest sets RemoteAddr to "192.0.2.1:1234" by default.
 	req.RemoteAddr = "192.168.1.100:54321"
-
-	// 2. Add a spoofed X-Forwarded-For header
 	req.Header.Set("X-Forwarded-For", "10.0.0.1")
 
 	rr := httptest.NewRecorder()
 	proxy.ServeHTTP(rr, req)
 
-	// The proxy MUST ignore the X-Forwarded-For and use the RemoteAddr.
 	expectedKey := "192.168.1.100"
 	if spyLimiter.lastKey != expectedKey {
-		t.Errorf("expected rate limit key to be %q, got %q (spoofing attempt failed to be blocked?)", expectedKey, spyLimiter.lastKey)
+		t.Errorf("expected rate limit key to be %q, got %q", expectedKey, spyLimiter.lastKey)
+	}
+}
+
+func TestProxy_Returns502OnConnectionRefused(t *testing.T) {
+	resolver := NewMapResolver(map[string]string{
+		"bookmarks.local": "http://127.0.0.1:1", // Port 1 is almost always refused
+	})
+	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil, 1*time.Second)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Host = "bookmarks.local"
+
+	rr := httptest.NewRecorder()
+	proxy.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadGateway {
+		t.Errorf("expected status 502, got %d", rr.Code)
+	}
+}
+
+func TestProxy_Returns504OnUpstreamTimeout(t *testing.T) {
+	// Upstream that sleeps longer than the proxy timeout
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(100 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer upstream.Close()
+
+	resolver := NewMapResolver(map[string]string{
+		"bookmarks.local": upstream.URL,
+	})
+
+	// Proxy with a very short timeout (50ms)
+	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil, 50*time.Millisecond)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Host = "bookmarks.local"
+
+	rr := httptest.NewRecorder()
+	proxy.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusGatewayTimeout {
+		t.Errorf("expected status 504, got %d", rr.Code)
 	}
 }
