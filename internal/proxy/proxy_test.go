@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
