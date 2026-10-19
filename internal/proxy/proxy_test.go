@@ -13,6 +13,17 @@ type FakeRateLimiter struct {
 	allow bool
 }
 
+// SpyRateLimiter is a fake that records the keys passed to it.
+type SpyRateLimiter struct {
+	lastKey string
+	allow   bool
+}
+
+func (s *SpyRateLimiter) Allow(ctx context.Context, key string) bool {
+	s.lastKey = key
+	return s.allow
+}
+
 func (f *FakeRateLimiter) Allow(ctx context.Context, key string) bool {
 	return f.allow
 }
@@ -127,5 +138,37 @@ func TestProxy_RateLimiting(t *testing.T) {
 	// The proxy must return 429 Too Many Requests when the limiter blocks
 	if rr.Code != http.StatusTooManyRequests {
 		t.Errorf("expected status 429, got %d", rr.Code)
+	}
+}
+
+func TestProxy_SecureClientIPExtraction(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer upstream.Close()
+
+	resolver := NewMapResolver(map[string]string{
+		"bookmarks.local": upstream.URL,
+	})
+
+	spyLimiter := &SpyRateLimiter{allow: true}
+	proxy := NewProxy(resolver, spyLimiter, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Host = "bookmarks.local"
+
+	// 1. Simulate a real connection. httptest sets RemoteAddr to "192.0.2.1:1234" by default.
+	req.RemoteAddr = "192.168.1.100:54321"
+
+	// 2. Add a spoofed X-Forwarded-For header
+	req.Header.Set("X-Forwarded-For", "10.0.0.1")
+
+	rr := httptest.NewRecorder()
+	proxy.ServeHTTP(rr, req)
+
+	// The proxy MUST ignore the X-Forwarded-For and use the RemoteAddr.
+	expectedKey := "192.168.1.100"
+	if spyLimiter.lastKey != expectedKey {
+		t.Errorf("expected rate limit key to be %q, got %q (spoofing attempt failed to be blocked?)", expectedKey, spyLimiter.lastKey)
 	}
 }
