@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -8,12 +9,12 @@ import (
 	"time"
 
 	"github.com/Carlos20052030/reverse-proxy/internal/proxy"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 // Config represents the application configuration.
 type Config struct {
-	ListenAddr string            `json:"listen_addr"`
-	Upstreams  map[string]string `json:"upstreams"`
+	Upstreams map[string]string `json:"upstreams"`
 }
 
 func main() {
@@ -31,26 +32,48 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 2. Setup the logger (JSON handler writing to stdout)
+	// 2. Setup the logger
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	// 3. Setup the components (Dependency Injection)
-	// Resolver: reads from our config map
+	// 3. Setup the Let's Encrypt Manager (autocert)
+	certManager := autocert.Manager{
+		Prompt: autocert.AcceptTOS,
+		Cache:  autocert.DirCache("certs"), // Caches certificates locally
+		HostPolicy: autocert.HostWhitelist(
+			"nuntix.com.br",
+			"api.nuntix.com.br",
+			"webhooks.nuntix.com.br",
+		),
+	}
+
+	// 4. Setup the components
 	resolver := proxy.NewMapResolver(cfg.Upstreams)
-
-	// RateLimiter: allows 10 requests per second, with a burst of 20
 	limiter := proxy.NewInMemoryRateLimiter(10, 20)
-
-	// Timeout: 5 seconds
 	timeout := 5 * time.Second
 
-	// 4. Instantiate the Proxy
+	// 5. Instantiate the Proxy
 	p := proxy.NewProxy(resolver, limiter, logger, timeout)
 
-	// 5. Start the HTTP server
-	logger.Info("starting reverse proxy", "address", cfg.ListenAddr)
-	if err := http.ListenAndServe(cfg.ListenAddr, p); err != nil {
-		logger.Error("server failed", "error", err)
+	// 6. Start the HTTP server on port 80 (for ACME challenges and HTTPS redirects)
+	go func() {
+		logger.Info("starting HTTP redirect server", "address", ":80")
+		// The HTTPHandler handles ACME HTTP-01 challenges and redirects everything else to HTTPS
+		if err := http.ListenAndServe(":80", certManager.HTTPHandler(nil)); err != nil {
+			logger.Error("http server failed", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	// 7. Start the HTTPS server on port 443
+	server := &http.Server{
+		Addr:      ":443",
+		Handler:   p,
+		TLSConfig: &tls.Config{GetCertificate: certManager.GetCertificate},
+	}
+
+	logger.Info("starting HTTPS reverse proxy", "address", ":443")
+	if err := server.ListenAndServeTLS("", ""); err != nil {
+		logger.Error("https server failed", "error", err)
 		os.Exit(1)
 	}
 }
