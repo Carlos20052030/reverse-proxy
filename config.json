@@ -1,6 +1,6 @@
 {
   "upstreams": {
-    "bookmarks.local": "http://127.0.0.1:8081",
-    "webhook.local": "http://127.0.0.1:8082"
+    "api.nuntix.com.br": "http://127.0.0.1:8081",
+    "webhooks.nuntix.com.br": "http://127.0.0.1:8082"
   }
 }
