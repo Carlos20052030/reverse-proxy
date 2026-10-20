@@ -1,0 +1,10 @@
+services:
+  proxy:
+    build: .
+    container_name: reverse-proxy
+    restart: unless-stopped
+    network_mode: "host"
+    volumes:
+      - ./config.json:/app/config.json:ro
+    # When using network_mode: "host", the "ports" directive is ignored.
+    # The proxy will bind directly to the host's network on port 8083.
