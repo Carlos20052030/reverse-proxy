@@ -2,43 +2,46 @@ package main
 
 import (
 	"crypto/tls"
-	"encoding/json"
+	"database/sql"
 	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/Carlos20052030/reverse-proxy/internal/proxy"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"golang.org/x/crypto/acme/autocert"
 )
 
-// Config represents the application configuration.
-type Config struct {
-	Upstreams map[string]string `json:"upstreams"`
-}
-
 func main() {
-	// 1. Load the configuration file
-	file, err := os.Open("config.json")
-	if err != nil {
-		slog.Error("failed to open config file", "error", err)
-		os.Exit(1)
-	}
-	defer file.Close()
-
-	var cfg Config
-	if err := json.NewDecoder(file).Decode(&cfg); err != nil {
-		slog.Error("failed to parse config file", "error", err)
-		os.Exit(1)
-	}
-
-	// 2. Setup the logger
+	// 1. Setup the logger
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	// 2. Connect to the database
+	// We read the connection string from an environment variable.
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		// Fallback for local development (assuming the local DB from the test)
+		dbURL = "postgres://postgres:postgres@localhost:5434/postgres?sslmode=disable"
+	}
+
+	db, err := sql.Open("pgx", dbURL)
+	if err != nil {
+		logger.Error("failed to connect to database", "error", err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	if err := db.Ping(); err != nil {
+		logger.Error("failed to ping database", "error", err)
+		os.Exit(1)
+	}
+	logger.Info("connected to database")
 
 	// 3. Setup the Let's Encrypt Manager (autocert)
 	certManager := autocert.Manager{
 		Prompt: autocert.AcceptTOS,
-		Cache:  autocert.DirCache("certs"), // Caches certificates locally
+		Cache:  autocert.DirCache("certs"),
 		HostPolicy: autocert.HostWhitelist(
 			"nuntix.com.br",
 			"api.nuntix.com.br",
@@ -47,17 +50,17 @@ func main() {
 	}
 
 	// 4. Setup the components
-	resolver := proxy.NewMapResolver(cfg.Upstreams)
+	// We now use the PostgresResolver instead of MapResolver
+	resolver := proxy.NewPostgresResolver(db)
 	limiter := proxy.NewInMemoryRateLimiter(10, 20)
 	timeout := 5 * time.Second
 
 	// 5. Instantiate the Proxy
 	p := proxy.NewProxy(resolver, limiter, logger, timeout)
 
-	// 6. Start the HTTP server on port 80 (for ACME challenges and HTTPS redirects)
+	// 6. Start the HTTP server on port 80
 	go func() {
 		logger.Info("starting HTTP redirect server", "address", ":80")
-		// The HTTPHandler handles ACME HTTP-01 challenges and redirects everything else to HTTPS
 		if err := http.ListenAndServe(":80", certManager.HTTPHandler(nil)); err != nil {
 			logger.Error("http server failed", "error", err)
 			os.Exit(1)
