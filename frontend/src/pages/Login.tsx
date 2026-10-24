@@ -8,8 +8,9 @@ export default function Login() {
         e.preventDefault();
 
         try {
-            const response = await fetch('https://api.nuntix.com.br/auth/login', {
-            headers: {
+            const response = await fetch('/auth/login', {
+                method: 'POST', // <--- ESSA LINHA É OBRIGATÓRIA
+                headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ email, password }),
