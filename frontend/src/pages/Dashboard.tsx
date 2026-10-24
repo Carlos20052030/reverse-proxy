@@ -19,7 +19,7 @@ export default function Dashboard() {
         }
 
         // Fetch real bookmarks from the backend
-        fetch('http://127.0.0.1:8081/bookmarks', {
+        fetch('https://api.nuntix.com.br/bookmarks', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
