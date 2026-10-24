@@ -3,8 +3,10 @@ services:
     build: .
     container_name: reverse-proxy
     restart: unless-stopped
-    network_mode: "host"
+    network_mode: "host"  # <--- Isso faz o container usar a rede do seu notebook
+    env_file:
+      - .env
+    environment:
+      - LOCAL_DEV=true
     volumes:
-      - ./config.json:/app/config.json:ro
-    # When using network_mode: "host", the "ports" directive is ignored.
-    # The proxy will bind directly to the host's network on port 8083.
+      - ./certs:/app/certs

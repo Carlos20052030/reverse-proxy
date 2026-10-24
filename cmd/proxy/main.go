@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Carlos20052030/reverse-proxy/internal/proxy"
@@ -14,15 +16,11 @@ import (
 )
 
 func main() {
-	// 1. Setup the logger
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	// 2. Connect to the database
-	// We read the connection string from an environment variable.
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		// Fallback for local development (assuming the local DB from the test)
-		dbURL = "postgres://postgres:postgres@localhost:5434/postgres?sslmode=disable"
+		dbURL = "postgres://bookmarks:senha_simples_local_123@localhost:5432/webhook_dispatcher?sslmode=disable"
 	}
 
 	db, err := sql.Open("pgx", dbURL)
@@ -38,27 +36,52 @@ func main() {
 	}
 	logger.Info("connected to database")
 
-	// 3. Setup the Let's Encrypt Manager (autocert)
+	// Let's Encrypt configuration
 	certManager := autocert.Manager{
-		Prompt: autocert.AcceptTOS,
-		Cache:  autocert.DirCache("certs"),
-		HostPolicy: autocert.HostWhitelist(
-			"nuntix.com.br",
-			"api.nuntix.com.br",
-			"webhooks.nuntix.com.br",
-		),
+		Prompt:     autocert.AcceptTOS,
+		Cache:      autocert.DirCache("certs"),
+		HostPolicy: autocert.HostWhitelist("nuntix.com.br", "api.nuntix.com.br", "webhooks.nuntix.com.br"),
 	}
 
-	// 4. Setup the components
-	// We now use the PostgresResolver instead of MapResolver
+	// Proxy setup
 	resolver := proxy.NewPostgresResolver(db)
 	limiter := proxy.NewInMemoryRateLimiter(10, 20)
 	timeout := 5 * time.Second
 
-	// 5. Instantiate the Proxy
 	p := proxy.NewProxy(resolver, limiter, logger, timeout)
 
-	// 6. Start the HTTP server on port 80
+	// Main router
+	mainMux := http.NewServeMux()
+
+	// Route to serve the React Frontend
+	staticDir := "./frontend/dist"
+	fs := http.FileServer(http.Dir(staticDir))
+
+	mainMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// Try to serve the requested file. If it doesn't exist, serve index.html (React SPA routing)
+		path := filepath.Join(staticDir, r.URL.Path)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			http.ServeFile(w, r, filepath.Join(staticDir, "index.html"))
+			return
+		}
+		fs.ServeHTTP(w, r)
+	})
+
+	// Main handler to route by Host
+	finalHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		host := strings.Split(r.Host, ":")[0]
+
+		// If the host is api or webhooks, forward to the Proxy
+		if host == "api.nuntix.com.br" || host == "webhooks.nuntix.com.br" {
+			p.ServeHTTP(w, r)
+			return
+		}
+
+		// Otherwise (nuntix.com.br or localhost), serve the React frontend
+		mainMux.ServeHTTP(w, r)
+	})
+
+	// Start HTTP server (ACME challenge and HTTPS redirect)
 	go func() {
 		logger.Info("starting HTTP redirect server", "address", ":80")
 		if err := http.ListenAndServe(":80", certManager.HTTPHandler(nil)); err != nil {
@@ -67,10 +90,20 @@ func main() {
 		}
 	}()
 
-	// 7. Start the HTTPS server on port 443
+	// Local development mode: bypass TLS and serve on port 8080
+	if os.Getenv("LOCAL_DEV") == "true" {
+		logger.Info("starting LOCAL DEVELOPMENT HTTP server", "address", ":8080")
+		if err := http.ListenAndServe(":8080", finalHandler); err != nil {
+			logger.Error("local http server failed", "error", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	// Start HTTPS server
 	server := &http.Server{
 		Addr:      ":443",
-		Handler:   p,
+		Handler:   finalHandler,
 		TLSConfig: &tls.Config{GetCertificate: certManager.GetCertificate},
 	}
 

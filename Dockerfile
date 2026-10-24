@@ -1,27 +1,39 @@
-# Stage 1: Builder
-FROM golang:1.27-alpine AS builder
+# Stage 1: Build the React Frontend
+FROM node:24-alpine AS frontend-builder
+WORKDIR /app/frontend
+# Install dependencies first (cache layer)
+COPY frontend/package*.json ./
+RUN npm install
+# Copy the rest of the frontend code and build
+COPY frontend/ ./
+RUN npm run build
 
+# Stage 2: Build the Go Backend
+FROM golang:1.27-alpine AS go-builder
 WORKDIR /app
-
-# Copy go.mod and download dependencies (none in this project, but good practice)
-COPY go.mod ./
+# Download Go modules
+COPY go.mod go.sum ./
 RUN go mod download
-
-# Copy the rest of the source code
+# Copy the rest of the backend code
 COPY . .
+# Build the static binary
+RUN CGO_ENABLED=0 GOOS=linux go build -o /proxy ./cmd/proxy
 
-# Build the binary
-RUN CGO_ENABLED=0 GOOS=linux go build -o /reverse-proxy ./cmd/proxy
-
-# Stage 2: Runner
+# Stage 3: Final Minimal Image
 FROM alpine:3.20
-
 WORKDIR /app
 
-# Copy the binary from the builder stage
-COPY --from=builder /reverse-proxy .
-COPY config.json .
+# Install CA certificates for HTTPS and timezone data
+RUN apk add --no-cache ca-certificates tzdata
 
-EXPOSE 8083
+# Copy the compiled Go binary from Stage 2
+COPY --from=go-builder /proxy .
 
-CMD ["./reverse-proxy"]
+# Copy the built frontend static files from Stage 1
+COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
+
+# Expose HTTP and HTTPS ports
+EXPOSE 80 443
+
+# Run the application
+CMD ["./proxy"]
