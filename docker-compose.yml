@@ -3,10 +3,8 @@ services:
     build: .
     container_name: reverse-proxy
     restart: unless-stopped
-    network_mode: "host"  # <--- Isso faz o container usar a rede do seu notebook
+    network_mode: "host"
     env_file:
       - .env
-    environment:
-      - LOCAL_DEV=true
     volumes:
       - ./certs:/app/certs
