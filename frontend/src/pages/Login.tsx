@@ -6,19 +6,14 @@ export default function Login() {
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-
         try {
             const response = await fetch('/auth/login', {
-                method: 'POST', // <--- ESSA LINHA É OBRIGATÓRIA
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
             });
 
-            if (!response.ok) {
-                throw new Error('Invalid email or password');
-            }
+            if (!response.ok) throw new Error('Invalid credentials');
 
             const data = await response.json();
             const token = data.access_token || data.token;
@@ -26,39 +21,57 @@ export default function Login() {
             if (token) {
                 localStorage.setItem('token', token);
                 window.location.href = '/dashboard';
-            } else {
-                alert('Token not found in response.');
             }
         } catch (err) {
-            alert("Login failed. Check if the backend is running and CORS is configured.");
-            console.error(err);
+            alert("Login failed. Check your credentials.");
         }
     };
 
     return (
-        <div style={{ padding: '2rem', maxWidth: '400px', margin: '0 auto', marginTop: '10vh' }}>
-            <h1>Nuntix Login</h1>
-            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <input
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    style={{ padding: '0.5rem' }}
-                />
-                <input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    style={{ padding: '0.5rem' }}
-                />
-                <button type="submit" style={{ padding: '0.5rem', cursor: 'pointer', backgroundColor: '#007bff', color: 'white', border: 'none' }}>
-                    Login
-                </button>
-            </form>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg">
+                <div>
+                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                        Nuntix Login
+                    </h2>
+                    <p className="mt-2 text-center text-sm text-gray-600">
+                        Acesse o seu painel de controle
+                    </p>
+                </div>
+                <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+                    <div className="rounded-md shadow-sm -space-y-px">
+                        <div>
+                            <input
+                                type="email"
+                                required
+                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                                placeholder="Email address"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <input
+                                type="password"
+                                required
+                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                                placeholder="Password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <button
+                            type="submit"
+                            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                        >
+                            Entrar
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 }
