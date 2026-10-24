@@ -53,6 +53,20 @@ func main() {
 	// Main router
 	mainMux := http.NewServeMux()
 
+	// API Routes (go to the Proxy)
+	mainMux.HandleFunc("/auth/", func(w http.ResponseWriter, r *http.Request) {
+		p.ServeHTTP(w, r)
+	})
+	mainMux.HandleFunc("/bookmarks", func(w http.ResponseWriter, r *http.Request) {
+		p.ServeHTTP(w, r)
+	})
+	mainMux.HandleFunc("/tags", func(w http.ResponseWriter, r *http.Request) {
+		p.ServeHTTP(w, r)
+	})
+	mainMux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		p.ServeHTTP(w, r)
+	})
+
 	// Route to serve the React Frontend
 	staticDir := "./frontend/dist"
 	fs := http.FileServer(http.Dir(staticDir))
