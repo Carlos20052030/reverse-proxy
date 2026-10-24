@@ -1,31 +1,33 @@
-# Reverse Proxy
+# Nuntix - API Gateway & Full-Stack Monorepo
 
-A production-ready, multi-tenant focused reverse proxy built from scratch in Go.
+A production-ready, multi-tenant API Gateway built from scratch in Go, now serving its own React Frontend from a single unified Docker container.
 
-This is **Project 4** of my backend portfolio. The goal is to master low-level HTTP, network programming, and rate limiting without relying on external frameworks. Built with a strict TDD approach and zero third-party dependencies.
+This is **Project 4** of my backend portfolio. The goal was to master low-level HTTP, network programming, and infrastructure while delivering a complete Full-Stack SaaS foundation.
 
-## Features (Phase 1)
+## Features
 
 - **Host-based Routing:** Routes traffic to different upstreams based on the `Host` header.
+- **Single Container Deployment:** The Go binary compiles and serves the React SPA (`frontend/dist`) directly, eliminating CORS issues and extra web servers (like Nginx).
+- **TLS Termination:** Automatic HTTPS via Let's Encrypt (`autocert`), handling ACME HTTP-01 challenges natively in Go.
+- **Dynamic Tenant Resolution:** Fetches upstream targets from a PostgreSQL database, allowing for multi-tenant architecture without restarting the server.
 - **Secure IP Extraction:** Derives the client IP exclusively from `RemoteAddr`, ignoring spoofed `X-Forwarded-For` headers.
-- **In-Memory Rate Limiting:** Uses a Thread-safe Token Bucket algorithm (opaque keys, ready for multi-tenancy).
-- **Header Hygiene:** Strips hop-by-hop headers (RFC 7230) and sets `X-Forwarded-*` headers correctly.
-- **Error Semantics:** Correctly distinguishes between `502 Bad Gateway` (upstream down) and `504 Gateway Timeout` (upstream slow).
+- **In-Memory Rate Limiting:** Thread-safe Token Bucket algorithm with opaque keys.
 - **Observability:** Structured JSON logging via `log/slog` and a Prometheus-compatible `/metrics` endpoint.
 
 ## Architecture
 
-The proxy is designed to be *extensible, not complete*. The core components are decoupled via interfaces (`Resolver`, `RateLimiter`, `Logger`) to allow easy integration with Postgres and Redis in Phase 2.
+The project is a **Monorepo**. The Go reverse proxy acts as a gateway, an API router, and a static file server for the React frontend.
 
-- `internal/proxy`: Core reverse proxy logic and middlewares.
-- `cmd/proxy`: Application entrypoint and dependency injection.
+- `cmd/proxy`: Application entrypoint (Go).
+- `internal`: Core reverse proxy logic, middlewares, and Postgres resolver.
+- `frontend`: React SPA (Vite + TypeScript) with JWT authentication, fetching data from the API.
 
 ## Tech Stack
 
-- **Language:** Go 1.27 (Standard Library only)
-- **Testing:** `net/http/httptest` + manual fakes (no mocking libraries).
-- **Logging:** `log/slog` (JSON)
-- **Metrics:** Custom `sync/atomic` counters exposed in Prometheus format.
+- **Backend:** Go 1.27 (Standard Library, `autocert`, `pgx`)
+- **Frontend:** React, TypeScript, Vite, React Router
+- **Database:** PostgreSQL
+- **Infrastructure:** Docker, Docker Compose, UFW, Let's Encrypt.
 
 ## Getting Started
 
@@ -35,64 +37,20 @@ The proxy is designed to be *extensible, not complete*. The core components are 
    cd reverse-proxy
    ```
 
-2. Run the tests:
+2. Run the local development environment (requires Docker):
    ```bash
-   go test -race ./...
+   docker compose up -d --build
    ```
 
-3. Configure your upstreams in `config.json`:
-   ```json
-   {
-     "listen_addr": ":8083",
-     "upstreams": {
-       "bookmarks.local": "http://127.0.0.1:8081",
-       "webhook.local": "http://127.0.0.1:8082"
-     }
-   }
-   ```
+3. Access the frontend at `http://localhost:8080` (in local dev mode).
 
-4. Start the proxy:
-   ```bash
-   go run cmd/proxy/main.go
-   ```
+## Production Deployment
 
-5. Test it:
-   ```bash
-   curl -H "Host: bookmarks.local" http://localhost:8083/health
-   ```
+The project uses a multi-stage Docker build (compiling both Node and Go) and runs in `network_mode: "host"` on a Linux VPS. It automatically provisions TLS certificates for `nuntix.com.br` and its subdomains.
 
 ## Roadmap
 
 - [x] **Phase 1:** Core proxy, rate limiting, and observability.
-- [ ] **Phase 2:** Multi-tenant registry (Postgres), distributed rate limiting (Redis), and TLS termination.
+- [x] **Phase 2:** Multi-tenant registry (Postgres), TLS termination, and Full-Stack Monorepo integration.
 - [ ] **Phase 3:** Commercial surface (billing, quotas, admin dashboard).
-```
-
-### 2. Adicionar a Licença (MIT)
-Para o GitHub reconhecer que o projeto é open-source e mostrar aquele selinho, você precisa de um arquivo `LICENSE`.
-
-No terminal, rode:
-```bash
-# Cria o arquivo de licença usando o ano atual e seu nome
-echo "MIT License
-
-Copyright (c) 2026 Carlos Daniel Silva Morais
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the \"Software\"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE." > LICENSE
 ```
