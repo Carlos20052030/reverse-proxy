@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 interface Bookmark {
     id: string;
@@ -93,7 +94,15 @@ export default function Dashboard() {
             <nav className="bg-white shadow-sm border-b border-gray-200">
                 <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16 items-center">
-                        <h1 className="text-2xl font-bold text-gray-900">Nuntix Dashboard</h1>
+                        <div className="flex items-center gap-4">
+                            <h1 className="text-2xl font-bold text-gray-900">Nuntix Dashboard</h1>
+                            <Link
+                                to="/api-keys"
+                                className="text-sm font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1 rounded-md transition-colors"
+                            >
+                                Gerenciar API Keys
+                            </Link>
+                        </div>
                         <button onClick={handleLogout} className="text-sm font-medium text-red-600 hover:text-red-800 transition-colors">
                             Sair
                         </button>
