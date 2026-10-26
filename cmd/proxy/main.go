@@ -60,7 +60,19 @@ func main() {
 	mainMux.HandleFunc("/bookmarks", func(w http.ResponseWriter, r *http.Request) {
 		p.ServeHTTP(w, r)
 	})
+	mainMux.HandleFunc("/bookmarks/", func(w http.ResponseWriter, r *http.Request) {
+		p.ServeHTTP(w, r)
+	})
 	mainMux.HandleFunc("/tags", func(w http.ResponseWriter, r *http.Request) {
+		p.ServeHTTP(w, r)
+	})
+	mainMux.HandleFunc("/tags/", func(w http.ResponseWriter, r *http.Request) {
+		p.ServeHTTP(w, r)
+	})
+	mainMux.HandleFunc("/api-keys", func(w http.ResponseWriter, r *http.Request) {
+		p.ServeHTTP(w, r)
+	})
+	mainMux.HandleFunc("/api-keys/", func(w http.ResponseWriter, r *http.Request) {
 		p.ServeHTTP(w, r)
 	})
 	mainMux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
