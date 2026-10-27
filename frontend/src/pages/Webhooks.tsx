@@ -29,11 +29,28 @@ export default function Webhooks() {
         fetch('/webhooks', {
             headers: { 'Authorization': `Bearer ${token}` }
         })
-            .then(res => {
-                if (!res.ok) throw new Error('Failed to fetch webhooks');
+            .then(async res => {
+                if (!res.ok) {
+                    if (res.status === 401) {
+                        localStorage.removeItem('token');
+                        navigate('/');
+                        return;
+                    }
+                    // Try to get error message from response body
+                    let errorMessage = 'Failed to fetch webhooks';
+                    try {
+                        const errorData = await res.json();
+                        if (errorData.message) errorMessage = errorData.message;
+                    } catch {
+                        // Response is not JSON, use status text
+                        errorMessage = `Error ${res.status}: ${res.statusText}`;
+                    }
+                    throw new Error(errorMessage);
+                }
                 return res.json();
             })
             .then(data => {
+                if (!data) return; // Handle case where 401 redirected
                 setWebhooks(Array.isArray(data) ? data : []);
                 setLoading(false);
             })
@@ -67,7 +84,16 @@ export default function Webhooks() {
                 })
             });
 
-            if (!res.ok) throw new Error('Failed to create webhook');
+            if (!res.ok) {
+                let errorMessage = 'Failed to create webhook';
+                try {
+                    const errorData = await res.json();
+                    if (errorData.message) errorMessage = errorData.message;
+                } catch {
+                    errorMessage = `Error ${res.status}: ${res.statusText}`;
+                }
+                throw new Error(errorMessage);
+            }
 
             const data = await res.json();
             setWebhooks([data, ...webhooks]);
@@ -77,7 +103,7 @@ export default function Webhooks() {
             setNewEvents('push,pull_request');
             setNewSecret('');
         } catch (err) {
-            setError('Error creating webhook. Please try again.');
+            setError(err instanceof Error ? err.message : 'Unknown error');
         } finally {
             setIsSubmitting(false);
         }
@@ -94,10 +120,19 @@ export default function Webhooks() {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (!res.ok) throw new Error('Failed to delete');
+            if (!res.ok) {
+                let errorMessage = 'Failed to delete';
+                try {
+                    const errorData = await res.json();
+                    if (errorData.message) errorMessage = errorData.message;
+                } catch {
+                    errorMessage = `Error ${res.status}: ${res.statusText}`;
+                }
+                throw new Error(errorMessage);
+            }
             setWebhooks(webhooks.filter(w => w.id !== id));
         } catch (err) {
-            alert("Error deleting webhook.");
+            setError(err instanceof Error ? err.message : 'Unknown error');
         }
     };
 

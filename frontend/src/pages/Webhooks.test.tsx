@@ -69,10 +69,30 @@ const mockFetchSuccess = (data: any, ok = true) => {
     });
 };
 
-const mockFetchError = (message = 'Failed') => {
+const mockFetchError = (status = 500, message = 'Failed', isJson = true) => {
+    const statusTexts: Record<number, string> = {
+        400: 'Bad Request',
+        401: 'Unauthorized',
+        403: 'Forbidden',
+        404: 'Not Found',
+        500: 'Internal Server Error',
+        502: 'Bad Gateway',
+        503: 'Service Unavailable',
+    };
     (global.fetch as any).mockResolvedValueOnce({
         ok: false,
-        json: () => Promise.resolve({ message }),
+        status,
+        statusText: statusTexts[status] || 'Internal Server Error',
+        json: isJson ? () => Promise.resolve({ message }) : () => Promise.reject(new Error('Not JSON')),
+    });
+};
+
+const mockFetch401 = () => {
+    (global.fetch as any).mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+        json: () => Promise.resolve({ message: 'Unauthorized' }),
     });
 };
 
@@ -148,7 +168,7 @@ describe('Webhooks Page - Loading & Display', () => {
     });
 
     it('shows error message when fetch fails', async () => {
-        mockFetchError('Failed to fetch webhooks');
+        mockFetchError(500, 'Failed to fetch webhooks', true);
         renderWithRouter();
 
         await waitFor(() => {
@@ -165,6 +185,33 @@ describe('Webhooks Page - Loading & Display', () => {
         });
 
         expect(screen.getByText('Nenhum webhook configurado. Clique em "Novo Webhook" para começar.')).toBeInTheDocument();
+    });
+
+    it('shows error message from JSON response body when fetch fails', async () => {
+        mockFetchError(500, 'Internal server error', true);
+        renderWithRouter();
+
+        await waitFor(() => {
+            expect(screen.getByText('Internal server error')).toBeInTheDocument();
+        });
+    });
+
+    it('shows error message from status text when response is not JSON', async () => {
+        mockFetchError(502, 'Bad Gateway', false);
+        renderWithRouter();
+
+        await waitFor(() => {
+            expect(screen.getByText('Error 502: Bad Gateway')).toBeInTheDocument();
+        });
+    });
+
+    it('redirects to login on 401 Unauthorized', async () => {
+        mockFetch401();
+        renderWithRouter();
+
+        await waitFor(() => {
+            expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('token');
+        }, { timeout: 1000 });
     });
 });
 
@@ -344,18 +391,13 @@ describe('Webhooks Page - Interactions', () => {
         const deleteButtons = screen.getAllByRole('button', { name: 'Excluir' });
 
         // Mock the DELETE failure
-        mockFetchError('Failed to delete');
-
-        // Mock window.alert
-        const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+        mockFetchError(500, 'Failed to delete', true);
 
         await userEvent.click(deleteButtons[0]);
 
         await waitFor(() => {
-            expect(alertSpy).toHaveBeenCalledWith('Error deleting webhook.');
+            expect(screen.getByText('Failed to delete')).toBeInTheDocument();
         });
-
-        alertSpy.mockRestore();
     });
 
     it('handles logout', async () => {
@@ -408,6 +450,35 @@ describe('Webhooks Page - Interactions', () => {
         await waitFor(() => {
             expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         });
+    });
+
+    it('shows error when create webhook fails', async () => {
+        mockFetchSuccess(mockWebhooks);
+        renderWithRouter();
+        await waitForLoading();
+
+        const newWebhookButton = screen.getByRole('button', { name: 'Novo Webhook' });
+        await userEvent.click(newWebhookButton);
+
+        // Fill form
+        await userEvent.clear(screen.getByLabelText('URL do Endpoint *'));
+        await userEvent.type(screen.getByLabelText('URL do Endpoint *'), 'https://new.example.com/webhook');
+
+        await userEvent.clear(screen.getByLabelText('Eventos (separados por vírgula) *'));
+        await userEvent.type(screen.getByLabelText('Eventos (separados por vírgula) *'), 'push');
+
+        // Mock the POST failure
+        mockFetchError(400, 'Invalid URL format', true);
+
+        const submitButton = screen.getByRole('button', { name: 'Criar Webhook' });
+        await userEvent.click(submitButton);
+
+        await waitFor(() => {
+            expect(screen.getByText('Invalid URL format')).toBeInTheDocument();
+        });
+
+        // Modal should still be open
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
 });
 
