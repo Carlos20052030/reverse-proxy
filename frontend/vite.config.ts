@@ -9,6 +9,7 @@ export default defineConfig({
             '/api-keys': 'http://127.0.0.1:8081',
             '/bookmarks': 'http://127.0.0.1:8081',
             '/auth': 'http://127.0.0.1:8081',
+            '/webhooks': 'http://127.0.0.1:8081',
         }
     }
 })

@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+// Get API base URL from environment variable
+// In development, uses relative paths (proxied via vite.config.ts)
+// In production, should be set to the backend domain (e.g., https://api.nuntix.com.br)
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
 interface Webhook {
     id: string;
     url: string;
@@ -26,7 +31,7 @@ export default function Webhooks() {
         const token = localStorage.getItem('token');
         if (!token) { navigate('/'); return; }
 
-        fetch('/webhooks', {
+        fetch(`${API_BASE_URL}/webhooks`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
             .then(async res => {
@@ -71,7 +76,7 @@ export default function Webhooks() {
         if (!token) { navigate('/'); return; }
 
         try {
-            const res = await fetch('/webhooks', {
+            const res = await fetch(`${API_BASE_URL}/webhooks`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -116,7 +121,7 @@ export default function Webhooks() {
         if (!token) { navigate('/'); return; }
 
         try {
-            const res = await fetch(`/webhooks/${id}`, {
+            const res = await fetch(`${API_BASE_URL}/webhooks/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
