@@ -23,6 +23,36 @@ window.confirm = vi.fn(() => true);
 // Mock fetch
 global.fetch = vi.fn();
 
+const mockWebhooks = [
+    {
+        id: 'wh_1',
+        url: 'https://api.example.com/webhooks/github',
+        events: ['push', 'pull_request'],
+        secret: 'whsec_abc123...',
+        status: 'active',
+        created_at: '2024-01-15T10:30:00Z',
+        updated_at: '2024-01-15T10:30:00Z',
+    },
+    {
+        id: 'wh_2',
+        url: 'https://staging.example.com/hooks/deploy',
+        events: ['deployment', 'release'],
+        secret: 'whsec_xyz789...',
+        status: 'active',
+        created_at: '2024-02-20T14:45:00Z',
+        updated_at: '2024-02-20T14:45:00Z',
+    },
+    {
+        id: 'wh_3',
+        url: 'https://legacy.example.com/old-webhook',
+        events: ['push'],
+        secret: 'whsec_legacy...',
+        status: 'inactive',
+        created_at: '2023-11-10T09:15:00Z',
+        updated_at: '2024-01-05T16:20:00Z',
+    },
+];
+
 const renderWithRouter = () => {
     mockLocalStorage.getItem.mockReturnValue('mock-token');
     return render(
@@ -32,19 +62,29 @@ const renderWithRouter = () => {
     );
 };
 
+const mockFetchSuccess = (data: any, ok = true) => {
+    (global.fetch as any).mockResolvedValueOnce({
+        ok,
+        json: () => Promise.resolve(data),
+    });
+};
+
+const mockFetchError = (message = 'Failed') => {
+    (global.fetch as any).mockResolvedValueOnce({
+        ok: false,
+        json: () => Promise.resolve({ message }),
+    });
+};
+
 describe('Webhooks Page - Loading & Display', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockLocalStorage.getItem.mockReturnValue('mock-token');
         window.confirm.mockReturnValue(true);
-        vi.useFakeTimers();
-    });
-
-    afterEach(() => {
-        vi.useRealTimers();
     });
 
     it('renders the page with navigation and title', () => {
+        mockFetchSuccess(mockWebhooks);
         renderWithRouter();
 
         expect(screen.getByText('Webhooks')).toBeInTheDocument();
@@ -55,17 +95,19 @@ describe('Webhooks Page - Loading & Display', () => {
     });
 
     it('shows loading state initially', () => {
+        // Don't resolve the fetch immediately
+        (global.fetch as any).mockImplementation(() => new Promise(() => {}));
         renderWithRouter();
 
         expect(screen.getByText('Carregando webhooks...')).toBeInTheDocument();
     });
 
-    it('displays mock webhooks in table after loading', async () => {
+    it('displays webhooks in table after loading', async () => {
+        mockFetchSuccess(mockWebhooks);
         renderWithRouter();
 
-        // Advance timers to resolve the setTimeout in fetchWebhooks (300ms)
-        await act(async () => {
-            vi.advanceTimersByTime(300);
+        await waitFor(() => {
+            expect(screen.queryByText('Carregando webhooks...')).not.toBeInTheDocument();
         });
 
         expect(screen.getByText('https://api.example.com/webhooks/github')).toBeInTheDocument();
@@ -74,10 +116,11 @@ describe('Webhooks Page - Loading & Display', () => {
     });
 
     it('displays webhook events as badges', async () => {
+        mockFetchSuccess(mockWebhooks);
         renderWithRouter();
 
-        await act(async () => {
-            vi.advanceTimersByTime(300);
+        await waitFor(() => {
+            expect(screen.queryByText('Carregando webhooks...')).not.toBeInTheDocument();
         });
 
         // "push" appears in two webhooks (wh_1 and wh_3)
@@ -89,10 +132,11 @@ describe('Webhooks Page - Loading & Display', () => {
     });
 
     it('displays status badges correctly', async () => {
+        mockFetchSuccess(mockWebhooks);
         renderWithRouter();
 
-        await act(async () => {
-            vi.advanceTimersByTime(300);
+        await waitFor(() => {
+            expect(screen.queryByText('Carregando webhooks...')).not.toBeInTheDocument();
         });
 
         // Active badges (green)
@@ -102,6 +146,26 @@ describe('Webhooks Page - Loading & Display', () => {
         // Inactive badge (gray)
         expect(screen.getByText('inactive')).toBeInTheDocument();
     });
+
+    it('shows error message when fetch fails', async () => {
+        mockFetchError('Failed to fetch webhooks');
+        renderWithRouter();
+
+        await waitFor(() => {
+            expect(screen.getByText('Failed to fetch webhooks')).toBeInTheDocument();
+        });
+    });
+
+    it('shows empty state when no webhooks', async () => {
+        mockFetchSuccess([]);
+        renderWithRouter();
+
+        await waitFor(() => {
+            expect(screen.queryByText('Carregando webhooks...')).not.toBeInTheDocument();
+        });
+
+        expect(screen.getByText('Nenhum webhook configurado. Clique em "Novo Webhook" para começar.')).toBeInTheDocument();
+    });
 });
 
 describe('Webhooks Page - Interactions', () => {
@@ -109,7 +173,6 @@ describe('Webhooks Page - Interactions', () => {
         vi.clearAllMocks();
         mockLocalStorage.getItem.mockReturnValue('mock-token');
         window.confirm.mockReturnValue(true);
-        vi.useRealTimers();
     });
 
     const waitForLoading = async () => {
@@ -119,6 +182,7 @@ describe('Webhooks Page - Interactions', () => {
     };
 
     it('opens modal when "Novo Webhook" button is clicked', async () => {
+        mockFetchSuccess(mockWebhooks);
         renderWithRouter();
         await waitForLoading();
 
@@ -132,6 +196,7 @@ describe('Webhooks Page - Interactions', () => {
     });
 
     it('closes modal when Cancel button is clicked', async () => {
+        mockFetchSuccess(mockWebhooks);
         renderWithRouter();
         await waitForLoading();
 
@@ -147,6 +212,7 @@ describe('Webhooks Page - Interactions', () => {
     });
 
     it('closes modal when clicking overlay', async () => {
+        mockFetchSuccess(mockWebhooks);
         renderWithRouter();
         await waitForLoading();
 
@@ -164,22 +230,40 @@ describe('Webhooks Page - Interactions', () => {
     });
 
     it('creates a new webhook when form is submitted', async () => {
+        mockFetchSuccess(mockWebhooks);
         renderWithRouter();
         await waitForLoading();
 
         const newWebhookButton = screen.getByRole('button', { name: 'Novo Webhook' });
         await userEvent.click(newWebhookButton);
 
-        // Fill form
+        // Fill form - clear fields first since they have default values
+        await userEvent.clear(screen.getByLabelText('URL do Endpoint *'));
         await userEvent.type(screen.getByLabelText('URL do Endpoint *'), 'https://new.example.com/webhook');
+
+        await userEvent.clear(screen.getByLabelText('Eventos (separados por vírgula) *'));
         await userEvent.type(screen.getByLabelText('Eventos (separados por vírgula) *'), 'push, release');
+
+        await userEvent.clear(screen.getByLabelText('Secret (opcional)'));
         await userEvent.type(screen.getByLabelText('Secret (opcional)'), 'mysecret');
+
+        // Mock the POST response
+        const newWebhook = {
+            id: 'wh_new',
+            url: 'https://new.example.com/webhook',
+            events: ['push', 'release'],
+            secret: 'whsec_myse...',
+            status: 'active',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        };
+        mockFetchSuccess(newWebhook);
 
         // Submit
         const submitButton = screen.getByRole('button', { name: 'Criar Webhook' });
         await userEvent.click(submitButton);
 
-        // Wait for modal to close (500ms timeout in component)
+        // Wait for modal to close
         await waitFor(() => {
             expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         }, { timeout: 2000 });
@@ -188,9 +272,25 @@ describe('Webhooks Page - Interactions', () => {
         await waitFor(() => {
             expect(screen.getByText('https://new.example.com/webhook')).toBeInTheDocument();
         }, { timeout: 1000 });
+
+        // Verify POST was called with correct data (second call, first is GET)
+        expect(global.fetch).toHaveBeenCalledTimes(2);
+        expect(global.fetch).toHaveBeenNthCalledWith(2, '/webhooks', expect.objectContaining({
+            method: 'POST',
+            headers: expect.objectContaining({
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer mock-token',
+            }),
+            body: JSON.stringify({
+                url: 'https://new.example.com/webhook',
+                events: ['push', 'release'],
+                secret: 'mysecret',
+            }),
+        }));
     });
 
     it('validates required fields', async () => {
+        mockFetchSuccess(mockWebhooks);
         renderWithRouter();
         await waitForLoading();
 
@@ -206,6 +306,7 @@ describe('Webhooks Page - Interactions', () => {
     });
 
     it('deletes a webhook when delete button is clicked', async () => {
+        mockFetchSuccess(mockWebhooks);
         renderWithRouter();
         await waitForLoading();
 
@@ -213,18 +314,52 @@ describe('Webhooks Page - Interactions', () => {
         const deleteButtons = screen.getAllByRole('button', { name: 'Excluir' });
         expect(deleteButtons.length).toBeGreaterThan(0);
 
+        // Mock the DELETE response
+        mockFetchSuccess({}, true);
+
         await userEvent.click(deleteButtons[0]);
 
-        // Wait for webhook to be removed (300ms timeout in component)
+        // Wait for webhook to be removed
         await waitFor(() => {
             expect(screen.queryByText('https://api.example.com/webhooks/github')).not.toBeInTheDocument();
         }, { timeout: 2000 });
 
         // Other webhooks should still be there
         expect(screen.getByText('https://staging.example.com/hooks/deploy')).toBeInTheDocument();
+
+        // Verify DELETE was called with correct URL
+        expect(global.fetch).toHaveBeenCalledWith('/webhooks/wh_1', expect.objectContaining({
+            method: 'DELETE',
+            headers: expect.objectContaining({
+                'Authorization': 'Bearer mock-token',
+            }),
+        }));
+    });
+
+    it('shows error when delete fails', async () => {
+        mockFetchSuccess(mockWebhooks);
+        renderWithRouter();
+        await waitForLoading();
+
+        const deleteButtons = screen.getAllByRole('button', { name: 'Excluir' });
+
+        // Mock the DELETE failure
+        mockFetchError('Failed to delete');
+
+        // Mock window.alert
+        const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+        await userEvent.click(deleteButtons[0]);
+
+        await waitFor(() => {
+            expect(alertSpy).toHaveBeenCalledWith('Error deleting webhook.');
+        });
+
+        alertSpy.mockRestore();
     });
 
     it('handles logout', async () => {
+        mockFetchSuccess(mockWebhooks);
         renderWithRouter();
         await waitForLoading();
 
@@ -233,13 +368,53 @@ describe('Webhooks Page - Interactions', () => {
 
         expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('token');
     });
+
+    it('shows submitting state during create', async () => {
+        mockFetchSuccess(mockWebhooks);
+        renderWithRouter();
+        await waitForLoading();
+
+        const newWebhookButton = screen.getByRole('button', { name: 'Novo Webhook' });
+        await userEvent.click(newWebhookButton);
+
+        await userEvent.type(screen.getByLabelText('URL do Endpoint *'), 'https://new.example.com/webhook');
+        await userEvent.type(screen.getByLabelText('Eventos (separados por vírgula) *'), 'push');
+
+        // Don't resolve the POST immediately
+        let resolvePost: any;
+        const postPromise = new Promise(resolve => { resolvePost = resolve; });
+        (global.fetch as any).mockImplementationOnce(() => postPromise);
+
+        const submitButton = screen.getByRole('button', { name: 'Criar Webhook' });
+        await userEvent.click(submitButton);
+
+        // Should show submitting state
+        expect(screen.getByRole('button', { name: 'Criando...' })).toBeInTheDocument();
+
+        // Resolve the POST
+        resolvePost({
+            ok: true,
+            json: () => Promise.resolve({
+                id: 'wh_new',
+                url: 'https://new.example.com/webhook',
+                events: ['push'],
+                secret: 'whsec_auto...',
+                status: 'active',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            }),
+        });
+
+        await waitFor(() => {
+            expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        });
+    });
 });
 
 describe('Webhooks Page - Auth', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.confirm.mockReturnValue(true);
-        vi.useRealTimers();
     });
 
     it('redirects to login when no token', () => {
@@ -251,8 +426,9 @@ describe('Webhooks Page - Auth', () => {
             </BrowserRouter>
         );
 
-        // Should navigate to login (handled by navigate('/'))
         // Since we're using fake router, we can't easily test navigation
         // but we can verify the component handles missing token
+        // The fetch should not be called
+        expect(global.fetch).not.toHaveBeenCalled();
     });
 });

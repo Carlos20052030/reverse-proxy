@@ -22,52 +22,25 @@ export default function Webhooks() {
     const [newSecret, setNewSecret] = useState('');
     const navigate = useNavigate();
 
-    // Mock data for development (replace with real API call when backend is ready)
-    const mockWebhooks: Webhook[] = [
-        {
-            id: 'wh_1',
-            url: 'https://api.example.com/webhooks/github',
-            events: ['push', 'pull_request'],
-            secret: 'whsec_abc123...',
-            status: 'active',
-            created_at: '2024-01-15T10:30:00Z',
-            updated_at: '2024-01-15T10:30:00Z',
-        },
-        {
-            id: 'wh_2',
-            url: 'https://staging.example.com/hooks/deploy',
-            events: ['deployment', 'release'],
-            secret: 'whsec_xyz789...',
-            status: 'active',
-            created_at: '2024-02-20T14:45:00Z',
-            updated_at: '2024-02-20T14:45:00Z',
-        },
-        {
-            id: 'wh_3',
-            url: 'https://legacy.example.com/old-webhook',
-            events: ['push'],
-            secret: 'whsec_legacy...',
-            status: 'inactive',
-            created_at: '2023-11-10T09:15:00Z',
-            updated_at: '2024-01-05T16:20:00Z',
-        },
-    ];
-
     const fetchWebhooks = () => {
         const token = localStorage.getItem('token');
         if (!token) { navigate('/'); return; }
 
-        // TODO: Replace with real API call when backend supports /webhooks endpoint
-        // fetch('/webhooks', { headers: { 'Authorization': `Bearer ${token}` } })
-        //     .then(res => res.json())
-        //     .then(data => { setWebhooks(data); setLoading(false); })
-        //     .catch(err => { setError(err.message); setLoading(false); });
-
-        // Using mock data for now
-        setTimeout(() => {
-            setWebhooks(mockWebhooks);
-            setLoading(false);
-        }, 300);
+        fetch('/webhooks', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to fetch webhooks');
+                return res.json();
+            })
+            .then(data => {
+                setWebhooks(Array.isArray(data) ? data : []);
+                setLoading(false);
+            })
+            .catch(err => {
+                setError(err.message);
+                setLoading(false);
+            });
     };
 
     useEffect(() => { fetchWebhooks(); }, []);
@@ -81,35 +54,23 @@ export default function Webhooks() {
         if (!token) { navigate('/'); return; }
 
         try {
-            // TODO: Replace with real API call when backend supports POST /webhooks
-            // const res = await fetch('/webhooks', {
-            //     method: 'POST',
-            //     headers: {
-            //         'Content-Type': 'application/json',
-            //         'Authorization': `Bearer ${token}`
-            //     },
-            //     body: JSON.stringify({
-            //         url: newUrl,
-            //         events: newEvents.split(',').map(e => e.trim()),
-            //         secret: newSecret || undefined
-            //     })
-            // });
-            // if (!res.ok) throw new Error('Failed to create webhook');
-            // const data = await res.json();
-            // setWebhooks([data, ...webhooks]);
+            const res = await fetch('/webhooks', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    url: newUrl,
+                    events: newEvents.split(',').map(e => e.trim()),
+                    secret: newSecret || undefined
+                })
+            });
 
-            // Simulate API call with mock data
-            await new Promise(resolve => setTimeout(resolve, 500));
-            const newWebhook: Webhook = {
-                id: `wh_${Date.now()}`,
-                url: newUrl,
-                events: newEvents.split(',').map(e => e.trim()),
-                secret: newSecret ? `whsec_${newSecret.slice(0, 6)}...` : 'whsec_auto...',
-                status: 'active',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-            };
-            setWebhooks([newWebhook, ...webhooks]);
+            if (!res.ok) throw new Error('Failed to create webhook');
+
+            const data = await res.json();
+            setWebhooks([data, ...webhooks]);
 
             setShowModal(false);
             setNewUrl('');
@@ -125,17 +86,15 @@ export default function Webhooks() {
     const handleDelete = async (id: string) => {
         if (!window.confirm("Are you sure you want to delete this webhook?")) return;
 
-        try {
-            // TODO: Replace with real API call when backend supports DELETE /webhooks/:id
-            // const res = await fetch(`/webhooks/${id}`, {
-            //     method: 'DELETE',
-            //     headers: { 'Authorization': `Bearer ${token}` }
-            // });
-            // if (!res.ok) throw new Error('Failed to delete');
-            // setWebhooks(webhooks.filter(w => w.id !== id));
+        const token = localStorage.getItem('token');
+        if (!token) { navigate('/'); return; }
 
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 300));
+        try {
+            const res = await fetch(`/webhooks/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error('Failed to delete');
             setWebhooks(webhooks.filter(w => w.id !== id));
         } catch (err) {
             alert("Error deleting webhook.");
