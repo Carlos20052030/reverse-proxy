@@ -292,3 +292,32 @@ func TestProxy_MetricsEndpoint(t *testing.T) {
 		t.Errorf("expected metrics output to contain 'reverse_proxy_requests_total', got:\n%s", logOutput)
 	}
 }
+
+// TestProxy_PassesCustomHeaders verifies that custom headers like X-API-Key are forwarded to upstream
+func TestProxy_PassesCustomHeaders(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		apiKey := r.Header.Get("X-API-Key")
+		if apiKey != "test-api-key-123" {
+			t.Errorf("expected X-API-Key 'test-api-key-123', got %q", apiKey)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer upstream.Close()
+
+	resolver := NewMapResolver(map[string]string{
+		"bookmarks.local": upstream.URL,
+	})
+
+	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil, 1*time.Second)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/bookmarks", nil)
+	req.Host = "bookmarks.local"
+	req.Header.Set("X-API-Key", "test-api-key-123")
+
+	rr := httptest.NewRecorder()
+	proxy.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", rr.Code)
+	}
+}
