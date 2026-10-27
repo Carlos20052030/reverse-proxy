@@ -3,6 +3,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import ApiKeys from './pages/ApiKeys';
+import Webhooks from './pages/Webhooks';
 import './App.css';
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
                 <Route path="/register" element={<Register />} />
                 <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/" />} />
                 <Route path="/api-keys" element={isAuthenticated ? <ApiKeys /> : <Navigate to="/" />} />
+                <Route path="/webhooks" element={isAuthenticated ? <Webhooks /> : <Navigate to="/" />} />
             </Routes>
         </BrowserRouter>
     );

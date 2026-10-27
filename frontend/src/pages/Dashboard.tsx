@@ -102,6 +102,12 @@ export default function Dashboard() {
                             >
                                 Gerenciar API Keys
                             </Link>
+                            <Link
+                                to="/webhooks"
+                                className="text-sm font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1 rounded-md transition-colors"
+                            >
+                                Gerenciar Webhooks
+                            </Link>
                         </div>
                         <button onClick={handleLogout} className="text-sm font-medium text-red-600 hover:text-red-800 transition-colors">
                             Sair
