@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 interface APIKey {
     id: string;
@@ -74,27 +74,8 @@ export default function ApiKeys() {
         }
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        navigate('/');
-    };
-
     return (
-        <div className="min-h-screen bg-gray-50">
-            <nav className="bg-white shadow-sm border-b border-gray-200">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16 items-center">
-                        <div className="flex space-x-4 items-center">
-                            <Link to="/dashboard" className="text-gray-500 hover:text-gray-900 font-medium">Dashboard</Link>
-                            <span className="text-gray-300">/</span>
-                            <h1 className="text-xl font-bold text-gray-900">API Keys</h1>
-                        </div>
-                        <button onClick={handleLogout} className="text-sm font-medium text-red-600 hover:text-red-800">Sair</button>
-                    </div>
-                </div>
-            </nav>
-
-            <main className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <>
                 {newRawKey && (
                     <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-8 rounded-md">
                         <div className="flex">
@@ -153,7 +134,6 @@ export default function ApiKeys() {
                         )}
                     </div>
                 )}
-            </main>
-        </div>
+        </>
     );
 }

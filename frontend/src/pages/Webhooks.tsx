@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 // Get API base URL from environment variable
 // In development, uses relative paths (proxied via vite.config.ts)
@@ -141,11 +141,6 @@ export default function Webhooks() {
         }
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        navigate('/');
-    };
-
     const getStatusBadge = (status: Webhook['status']) => (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
             status === 'active'
@@ -157,23 +152,7 @@ export default function Webhooks() {
     );
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <nav className="bg-white shadow-sm border-b border-gray-200">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16 items-center">
-                        <div className="flex space-x-4 items-center">
-                            <Link to="/dashboard" className="text-gray-500 hover:text-gray-900 font-medium">Dashboard</Link>
-                            <span className="text-gray-300">/</span>
-                            <Link to="/api-keys" className="text-gray-500 hover:text-gray-900 font-medium">API Keys</Link>
-                            <span className="text-gray-300">/</span>
-                            <h1 className="text-xl font-bold text-gray-900">Webhooks</h1>
-                        </div>
-                        <button onClick={handleLogout} className="text-sm font-medium text-red-600 hover:text-red-800">Sair</button>
-                    </div>
-                </div>
-            </nav>
-
-            <main className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <>
                 {/* Create Webhook Button */}
                 <div className="mb-8">
                     <button
@@ -341,7 +320,6 @@ export default function Webhooks() {
                         </div>
                     </div>
                 )}
-            </main>
-        </div>
+        </>
     );
 }

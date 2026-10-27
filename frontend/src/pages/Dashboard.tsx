@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 
 interface Bookmark {
     id: string;
@@ -84,39 +83,8 @@ export default function Dashboard() {
         }
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        window.location.href = '/';
-    };
-
     return (
-        <div className="min-h-screen bg-gray-50">
-            <nav className="bg-white shadow-sm border-b border-gray-200">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16 items-center">
-                        <div className="flex items-center gap-4">
-                            <h1 className="text-2xl font-bold text-gray-900">Nuntix Dashboard</h1>
-                            <Link
-                                to="/api-keys"
-                                className="text-sm font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1 rounded-md transition-colors"
-                            >
-                                Gerenciar API Keys
-                            </Link>
-                            <Link
-                                to="/webhooks"
-                                className="text-sm font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1 rounded-md transition-colors"
-                            >
-                                Gerenciar Webhooks
-                            </Link>
-                        </div>
-                        <button onClick={handleLogout} className="text-sm font-medium text-red-600 hover:text-red-800 transition-colors">
-                            Sair
-                        </button>
-                    </div>
-                </div>
-            </nav>
-
-            <main className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <>
                 <div className="bg-white rounded-xl shadow-sm p-6 mb-8 border border-gray-200">
                     <h2 className="text-lg font-semibold text-gray-800 mb-4">Adicionar Novo Bookmark</h2>
                     <form onSubmit={handleAddBookmark} className="flex flex-col sm:flex-row gap-4">
@@ -157,7 +125,6 @@ export default function Dashboard() {
                         <p className="text-gray-500 text-center py-8">Nenhum bookmark encontrado.</p>
                     )}
                 </div>
-            </main>
-        </div>
+        </>
     );
 }

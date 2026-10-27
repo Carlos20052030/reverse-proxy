@@ -48,7 +48,10 @@ func main() {
 	limiter := proxy.NewInMemoryRateLimiter(10, 20)
 	timeout := 5 * time.Second
 
-	p := proxy.NewProxy(resolver, limiter, logger, timeout)
+	// CORS configuration for cross-origin requests from frontend
+	corsConfig := proxy.DefaultCORSConfig()
+
+	p := proxy.NewProxy(resolver, limiter, logger, timeout, corsConfig)
 
 	// Main router
 	mainMux := http.NewServeMux()

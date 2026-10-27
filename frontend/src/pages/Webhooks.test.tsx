@@ -103,15 +103,12 @@ describe('Webhooks Page - Loading & Display', () => {
         window.confirm.mockReturnValue(true);
     });
 
-    it('renders the page with navigation and title', () => {
+    it('renders the page content', () => {
         mockFetchSuccess(mockWebhooks);
         renderWithRouter();
 
-        expect(screen.getByText('Webhooks')).toBeInTheDocument();
+        // Webhooks page content (navigation is in Layout component)
         expect(screen.getByText('Novo Webhook')).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: 'API Keys' })).toBeInTheDocument();
-        expect(screen.getByText('Sair')).toBeInTheDocument();
     });
 
     it('shows loading state initially', () => {
@@ -398,17 +395,6 @@ describe('Webhooks Page - Interactions', () => {
         await waitFor(() => {
             expect(screen.getByText('Failed to delete')).toBeInTheDocument();
         });
-    });
-
-    it('handles logout', async () => {
-        mockFetchSuccess(mockWebhooks);
-        renderWithRouter();
-        await waitForLoading();
-
-        const logoutButton = screen.getByRole('button', { name: 'Sair' });
-        await userEvent.click(logoutButton);
-
-        expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('token');
     });
 
     it('shows submitting state during create', async () => {

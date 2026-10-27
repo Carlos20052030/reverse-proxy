@@ -46,7 +46,7 @@ func TestProxy_RoutesByHost(t *testing.T) {
 		"bookmarks.local": upstream.URL,
 	})
 
-	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil, 1*time.Second)
+	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil, 1*time.Second, nil)
 
 	t.Run("routes to known host", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
@@ -102,7 +102,7 @@ func TestProxy_Headers(t *testing.T) {
 		"bookmarks.local": upstream.URL,
 	})
 
-	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil, 1*time.Second)
+	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil, 1*time.Second, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	req.Host = "bookmarks.local"
@@ -129,7 +129,7 @@ func TestProxy_RateLimiting(t *testing.T) {
 	})
 
 	// allow: false = força o bloqueio para testar o 429
-	proxy := NewProxy(resolver, &FakeRateLimiter{allow: false}, nil, 1*time.Second)
+	proxy := NewProxy(resolver, &FakeRateLimiter{allow: false}, nil, 1*time.Second, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	req.Host = "bookmarks.local"
@@ -154,7 +154,7 @@ func TestProxy_SecureClientIPExtraction(t *testing.T) {
 
 	spyLimiter := &SpyRateLimiter{allow: true}
 	// Passa o spyLimiter para podermos inspecionar o lastKey
-	proxy := NewProxy(resolver, spyLimiter, nil, 1*time.Second)
+	proxy := NewProxy(resolver, spyLimiter, nil, 1*time.Second, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Host = "bookmarks.local"
@@ -175,7 +175,7 @@ func TestProxy_Returns502OnConnectionRefused(t *testing.T) {
 	resolver := NewMapResolver(map[string]string{
 		"bookmarks.local": "http://127.0.0.1:1", // Port 1 is almost always refused
 	})
-	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil, 1*time.Second)
+	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil, 1*time.Second, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Host = "bookmarks.local"
@@ -201,7 +201,7 @@ func TestProxy_Returns504OnUpstreamTimeout(t *testing.T) {
 	})
 
 	// Proxy with a very short timeout (50ms)
-	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil, 50*time.Millisecond)
+	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil, 50*time.Millisecond, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Host = "bookmarks.local"
@@ -228,7 +228,7 @@ func TestProxy_StructuredLogging(t *testing.T) {
 	var logBuf bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&logBuf, nil))
 
-	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, logger, 1*time.Second)
+	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, logger, 1*time.Second, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	req.Host = "bookmarks.local"
@@ -266,7 +266,7 @@ func TestProxy_MetricsEndpoint(t *testing.T) {
 		"bookmarks.local": upstream.URL,
 	})
 
-	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil, 1*time.Second)
+	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil, 1*time.Second, nil)
 
 	// 1. Make a regular request to the upstream
 	req1 := httptest.NewRequest(http.MethodGet, "/api/test", nil)
@@ -308,7 +308,7 @@ func TestProxy_PassesCustomHeaders(t *testing.T) {
 		"bookmarks.local": upstream.URL,
 	})
 
-	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil, 1*time.Second)
+	proxy := NewProxy(resolver, &FakeRateLimiter{allow: true}, nil, 1*time.Second, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/bookmarks", nil)
 	req.Host = "bookmarks.local"
