@@ -101,14 +101,19 @@ export default function Webhooks() {
             }
 
             const data = await res.json();
-            setWebhooks([data, ...webhooks]);
+            // Use functional update to avoid stale closure
+            setWebhooks(prev => [data, ...prev]);
 
             setShowModal(false);
             setNewUrl('');
             setNewEvents('push,pull_request');
             setNewSecret('');
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unknown error');
+            // Ensure ANY error is displayed on screen
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            setError(errorMessage);
+            // Also log to console for debugging
+            console.error('Webhook creation failed:', err);
         } finally {
             setIsSubmitting(false);
         }
