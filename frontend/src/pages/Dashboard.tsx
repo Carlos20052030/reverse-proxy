@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../lib/api';
 
 interface Bookmark {
     id: string;
@@ -7,6 +9,7 @@ interface Bookmark {
 }
 
 export default function Dashboard() {
+    const navigate = useNavigate();
     const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -15,28 +18,21 @@ export default function Dashboard() {
     const [newUrl, setNewUrl] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const fetchBookmarks = () => {
-        const token = localStorage.getItem('token');
-        if (!token) { window.location.href = '/'; return; }
+    // Set navigate for global 401 redirect
+    api.setNavigate(navigate);
 
-        fetch('/bookmarks', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-            .then(res => {
-                if (!res.ok) {
-                    if (res.status === 401) { localStorage.removeItem('token'); window.location.href = '/'; }
-                    throw new Error('Failed to fetch bookmarks');
-                }
-                return res.json();
-            })
-            .then(data => {
-                setBookmarks(data.bookmarks || data);
-                setLoading(false);
-            })
-            .catch(err => {
+    const fetchBookmarks = async () => {
+        try {
+            const res = await api.get('/bookmarks');
+            const data = await res.json();
+            setBookmarks(data.bookmarks || data);
+        } catch (err) {
+            if (err instanceof Error && err.message !== 'Unauthorized - redirected to login') {
                 setError(err.message);
-                setLoading(false);
-            });
+            }
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => { fetchBookmarks(); }, []);
@@ -44,25 +40,18 @@ export default function Dashboard() {
     const handleAddBookmark = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
-        const token = localStorage.getItem('token');
 
         try {
-            const response = await fetch('/bookmarks', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ title: newTitle, url: newUrl }),
-            });
-
+            const response = await api.post('/bookmarks', { title: newTitle, url: newUrl });
             if (!response.ok) throw new Error('Failed to create bookmark');
 
             setNewTitle('');
             setNewUrl('');
             fetchBookmarks();
         } catch (err) {
-            alert("Error creating bookmark.");
+            if (err instanceof Error && err.message !== 'Unauthorized - redirected to login') {
+                alert("Error creating bookmark.");
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -70,16 +59,14 @@ export default function Dashboard() {
 
     const handleDelete = async (id: string) => {
         if (!window.confirm("Delete this bookmark?")) return;
-        const token = localStorage.getItem('token');
         try {
-            const response = await fetch(`/bookmarks/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const response = await api.delete(`/bookmarks/${id}`);
             if (!response.ok) throw new Error('Failed to delete');
             setBookmarks(bookmarks.filter(bm => bm.id !== id));
         } catch (err) {
-            alert("Error deleting bookmark.");
+            if (err instanceof Error && err.message !== 'Unauthorized - redirected to login') {
+                alert("Error deleting bookmark.");
+            }
         }
     };
 

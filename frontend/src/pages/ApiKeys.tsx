@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../lib/api';
 
 interface APIKey {
     id: string;
@@ -10,42 +11,34 @@ interface APIKey {
 }
 
 export default function ApiKeys() {
+    const navigate = useNavigate();
     const [keys, setKeys] = useState<APIKey[]>([]);
     const [name, setName] = useState('');
     const [newRawKey, setNewRawKey] = useState('');
     const [loading, setLoading] = useState(true);
-    const navigate = useNavigate();
 
-    const fetchKeys = () => {
-        const token = localStorage.getItem('token');
-        if (!token) { navigate('/'); return; }
+    // Set navigate for global 401 redirect
+    api.setNavigate(navigate);
 
-        fetch('/api-keys', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-            .then(res => res.json())
-            .then(data => {
-                setKeys(Array.isArray(data) ? data : []);
-                setLoading(false);
-            })
-            .catch(() => setLoading(false));
+    const fetchKeys = async () => {
+        try {
+            const res = await api.get('/api-keys');
+            const data = await res.json();
+            setKeys(Array.isArray(data) ? data : []);
+        } catch (err) {
+            // 401 errors are handled globally by the API client
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => { fetchKeys(); }, []);
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
-        const token = localStorage.getItem('token');
 
         try {
-            const res = await fetch('/api-keys', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ name })
-            });
+            const res = await api.post('/api-keys', { name });
 
             if (!res.ok) throw new Error('Failed to create key');
 
@@ -54,23 +47,23 @@ export default function ApiKeys() {
             setName('');
             fetchKeys();
         } catch (err) {
-            alert("Error creating API Key");
+            if (err instanceof Error && err.message !== 'Unauthorized - redirected to login') {
+                alert("Error creating API Key");
+            }
         }
     };
 
     const handleRevoke = async (id: string) => {
         if (!window.confirm("Are you sure? Applications using this key will stop working immediately.")) return;
-        const token = localStorage.getItem('token');
 
         try {
-            const res = await fetch(`/api-keys/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await api.delete(`/api-keys/${id}`);
             if (!res.ok) throw new Error('Failed to revoke');
             fetchKeys();
         } catch (err) {
-            alert("Error revoking key");
+            if (err instanceof Error && err.message !== 'Unauthorized - redirected to login') {
+                alert("Error revoking key");
+            }
         }
     };
 
