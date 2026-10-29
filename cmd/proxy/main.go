@@ -5,12 +5,13 @@ import (
 	"database/sql"
 	"log/slog"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/Carlos20052030/reverse-proxy/internal/proxy"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -18,6 +19,7 @@ import (
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
+	// Database connection (kept for potential future use / health checks)
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		dbURL = "postgres://bookmarks:senha_simples_local_123@localhost:5432/webhook_dispatcher?sslmode=disable"
@@ -43,80 +45,104 @@ func main() {
 		HostPolicy: autocert.HostWhitelist("nuntix.com.br", "api.nuntix.com.br", "webhooks.nuntix.com.br"),
 	}
 
-	// Proxy setup
-	resolver := proxy.NewPostgresResolver(db)
-	limiter := proxy.NewInMemoryRateLimiter(10, 20)
-	timeout := 5 * time.Second
+	// Backend URLs (static per requirements)
+	bookmarksAPI, _ := url.Parse("http://127.0.0.1:8081")
+	webhookDispatcher, _ := url.Parse("http://127.0.0.1:8082")
 
-	// CORS configuration for cross-origin requests from frontend
-	corsConfig := proxy.DefaultCORSConfig()
+	// Transport with timeout
+	transport := &http.Transport{
+		ResponseHeaderTimeout: 5 * time.Second,
+	}
 
-	p := proxy.NewProxy(resolver, limiter, logger, timeout, corsConfig)
+	// Reverse proxy for bookmarks-api (api.nuntix.com.br + nuntix.com.br/api/*)
+	bookmarksProxy := &httputil.ReverseProxy{
+		Transport: transport,
+		Rewrite: func(r *httputil.ProxyRequest) {
+			r.SetURL(bookmarksAPI)
+			r.Out.Host = r.In.Host
+			r.SetXForwarded()
 
-	// Main router
-	mainMux := http.NewServeMux()
+			// Strip /api prefix for nuntix.com.br host
+			if strings.HasPrefix(r.Out.URL.Path, "/api/") {
+				r.Out.URL.Path = strings.TrimPrefix(r.Out.URL.Path, "/api")
+			}
+			if r.Out.URL.Path == "/api" {
+				r.Out.URL.Path = "/"
+			}
+		},
+		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+			logger.Error("bookmarks proxy error", "error", err, "path", r.URL.Path)
+			http.Error(w, "Bad Gateway", http.StatusBadGateway)
+		},
+	}
 
-	// API Routes (go to the Proxy) - /api/* prefix (new frontend) and specific backend routes (backward compat)
-	mainMux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
-		p.ServeHTTP(w, r)
-	})
-	mainMux.HandleFunc("/auth/", func(w http.ResponseWriter, r *http.Request) {
-		p.ServeHTTP(w, r)
-	})
-	mainMux.HandleFunc("/bookmarks", func(w http.ResponseWriter, r *http.Request) {
-		p.ServeHTTP(w, r)
-	})
-	mainMux.HandleFunc("/bookmarks/", func(w http.ResponseWriter, r *http.Request) {
-		p.ServeHTTP(w, r)
-	})
-	mainMux.HandleFunc("/tags", func(w http.ResponseWriter, r *http.Request) {
-		p.ServeHTTP(w, r)
-	})
-	mainMux.HandleFunc("/tags/", func(w http.ResponseWriter, r *http.Request) {
-		p.ServeHTTP(w, r)
-	})
-	mainMux.HandleFunc("/api-keys", func(w http.ResponseWriter, r *http.Request) {
-		p.ServeHTTP(w, r)
-	})
-	mainMux.HandleFunc("/api-keys/", func(w http.ResponseWriter, r *http.Request) {
-		p.ServeHTTP(w, r)
-	})
-	mainMux.HandleFunc("/webhooks", func(w http.ResponseWriter, r *http.Request) {
-		p.ServeHTTP(w, r)
-	})
-	mainMux.HandleFunc("/webhooks/", func(w http.ResponseWriter, r *http.Request) {
-		p.ServeHTTP(w, r)
-	})
-	mainMux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
-		p.ServeHTTP(w, r)
-	})
+	// Reverse proxy for webhook-dispatcher (webhooks.nuntix.com.br)
+	webhookProxy := &httputil.ReverseProxy{
+		Transport: transport,
+		Rewrite: func(r *httputil.ProxyRequest) {
+			r.SetURL(webhookDispatcher)
+			r.Out.Host = r.In.Host
+			r.SetXForwarded()
+			// No path rewriting needed for webhooks.nuntix.com.br
+		},
+		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+			logger.Error("webhook proxy error", "error", err, "path", r.URL.Path)
+			http.Error(w, "Bad Gateway", http.StatusBadGateway)
+		},
+	}
 
-	// Route to serve the React Frontend
+	// Static file server for React frontend
 	staticDir := "./frontend/dist"
 	fs := http.FileServer(http.Dir(staticDir))
 
-	mainMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// Try to serve the requested file. If it doesn't exist, serve index.html (React SPA routing)
-		path := filepath.Join(staticDir, r.URL.Path)
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			http.ServeFile(w, r, filepath.Join(staticDir, "index.html"))
+	// Main handler - routes by Host header
+	mainHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		host := strings.Split(r.Host, ":")[0]
+		path := r.URL.Path
+
+		logger.Info("request", "host", host, "path", path, "method", r.Method)
+
+		// REGRA 1: Host-based routing
+		switch host {
+		case "api.nuntix.com.br":
+			// ALL requests to bookmarks-api
+			bookmarksProxy.ServeHTTP(w, r)
+			return
+
+		case "webhooks.nuntix.com.br":
+			// ALL requests to webhook-dispatcher
+			webhookProxy.ServeHTTP(w, r)
+			return
+
+		case "nuntix.com.br":
+			// REGRA 2: Path-based routing for main host
+			if strings.HasPrefix(path, "/api/") {
+				// /api/* → bookmarks-api (strip /api prefix)
+				bookmarksProxy.ServeHTTP(w, r)
+				return
+			}
+			// ALL other paths → React SPA
+			serveReactApp(w, r, staticDir, fs)
+			return
+
+		default:
+			// Unknown host - serve React app (or 404)
+			serveReactApp(w, r, staticDir, fs)
 			return
 		}
-		fs.ServeHTTP(w, r)
 	})
 
-	// Main handler to route by Host
-	finalHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		host := strings.Split(r.Host, ":")[0]
+	// Health check endpoint (optional, for monitoring)
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok"}`))
+	})
 
-		// If the host is api or webhooks, forward to the Proxy
-		if host == "api.nuntix.com.br" || host == "webhooks.nuntix.com.br" {
-			p.ServeHTTP(w, r)
-			return
-		}
-
-		// Otherwise (nuntix.com.br or localhost), serve the React frontend
-		mainMux.ServeHTTP(w, r)
+	// Metrics endpoint (served directly, not proxied)
+	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; version=0.0.4")
+		w.Write([]byte("# Reverse proxy metrics\n"))
 	})
 
 	// Start HTTP server (ACME challenge and HTTPS redirect)
@@ -128,10 +154,10 @@ func main() {
 		}
 	}()
 
-	// Local development mode: bypass TLS and serve on port 8080
+	// Local development mode: bypass TLS
 	if os.Getenv("LOCAL_DEV") == "true" {
 		logger.Info("starting LOCAL DEVELOPMENT HTTP server", "address", ":8080")
-		if err := http.ListenAndServe(":8080", finalHandler); err != nil {
+		if err := http.ListenAndServe(":8080", mainHandler); err != nil {
 			logger.Error("local http server failed", "error", err)
 			os.Exit(1)
 		}
@@ -141,7 +167,7 @@ func main() {
 	// Start HTTPS server
 	server := &http.Server{
 		Addr:      ":443",
-		Handler:   finalHandler,
+		Handler:   mainHandler,
 		TLSConfig: &tls.Config{GetCertificate: certManager.GetCertificate},
 	}
 
@@ -150,4 +176,17 @@ func main() {
 		logger.Error("https server failed", "error", err)
 		os.Exit(1)
 	}
+}
+
+// serveReactApp serves the React SPA (index.html for non-existent files)
+func serveReactApp(w http.ResponseWriter, r *http.Request, staticDir string, fs http.Handler) {
+	// Try to serve the requested file
+	path := filepath.Join(staticDir, r.URL.Path)
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		// File doesn't exist, serve index.html for SPA routing
+		http.ServeFile(w, r, filepath.Join(staticDir, "index.html"))
+		return
+	}
+	// File exists, serve it
+	fs.ServeHTTP(w, r)
 }
