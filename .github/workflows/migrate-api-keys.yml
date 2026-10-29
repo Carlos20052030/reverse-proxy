@@ -1,0 +1,53 @@
+name: Migrate API Keys Table
+
+on:
+  workflow_dispatch:
+
+jobs:
+  migrate:
+    name: Create api_keys table
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run migration on VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            echo "=== Creating api_keys table with bcrypt fields ==="
+            docker exec -i bookmarks-api-db-1 psql -U bookmarks -d webhook_dispatcher -c "
+              CREATE TABLE IF NOT EXISTS api_keys (
+                  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                  name VARCHAR(255) NOT NULL,
+                  key_prefix VARCHAR(20) NOT NULL,
+                  key_hash VARCHAR(255) NOT NULL,
+                  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                  revoked_at TIMESTAMP WITH TIME ZONE
+              );
+
+              CREATE INDEX IF NOT EXISTS idx_api_keys_key_prefix ON api_keys(key_prefix);
+              CREATE INDEX IF NOT EXISTS idx_api_keys_revoked_at ON api_keys(revoked_at);
+            "
+
+            echo ""
+            echo "=== Verifying table creation ==="
+            docker exec -i bookmarks-api-db-1 psql -U bookmarks -d webhook_dispatcher -c "\d api_keys"
+
+            echo ""
+            echo "=== Testing API key creation after migration ==="
+            # First login to get a token
+            TOKEN=$(curl -s -X POST http://localhost:8081/auth/login \
+              -H "Content-Type: application/json" \
+              -d '{"email": "admin@nuntix.com.br", "password": "senha123"}' | jq -r '.token // empty')
+
+            if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
+              echo "Got token, testing API key creation..."
+              curl -X POST http://localhost:8081/api-keys \
+                -H "Content-Type: application/json" \
+                -H "Authorization: Bearer $TOKEN" \
+                -d '{"name": "test-key-from-migration"}' \
+                -v 2>&1 | head -30
+            else
+              echo "Could not get token for testing"
+            fi
