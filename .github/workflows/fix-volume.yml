@@ -1,0 +1,62 @@
+name: Fix Volume Issue on VPS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix:
+    name: Check and Fix VPS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check VPS docker-compose and container
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            echo "=== 1. Check docker-compose.yml on VPS ==="
+            cat /home/carlos/reverse-proxy/docker-compose.yml
+
+            echo ""
+            echo "=== 2. Check container volumes ==="
+            docker inspect reverse-proxy --format '{{.Mounts}}'
+
+            echo ""
+            echo "=== 3. Check frontend/dist inside container ==="
+            docker exec reverse-proxy ls -la /app/frontend/dist/ 2>/dev/null || echo "Directory not found"
+
+            echo ""
+            echo "=== 4. Check index.html ==="
+            docker exec reverse-proxy ls -la /app/frontend/dist/index.html 2>/dev/null || echo "index.html NOT FOUND"
+
+            echo ""
+            echo "=== 5. Check if volume is mounting host frontend/dist ==="
+            docker inspect reverse-proxy --format '{{range .Mounts}}{{.Source}} -> {{.Destination}} {{end}}'
+
+            echo ""
+            echo "=== 6. Test /api-keys endpoint ==="
+            curl -v http://localhost/api/api-keys 2>&1 | head -30
+
+            echo ""
+            echo "=== 7. Test /webhooks page ==="
+            curl -v http://localhost/webhooks 2>&1 | head -50
+
+            echo ""
+            echo "=== 8. Check Go binary listening ports ==="
+            docker exec reverse-proxy netstat -tlnp 2>/dev/null || ss -tlnp 2>/dev/null
+
+            echo ""
+            echo "=== 9. Force clean rebuild without any volumes ==="
+            cd /home/carlos/reverse-proxy
+            docker compose down
+            docker compose build --no-cache
+            docker compose up -d
+
+            echo ""
+            echo "=== 10. Wait and verify ==="
+            sleep 10
+            docker exec reverse-proxy ls -la /app/frontend/dist/index.html 2>/dev/null && echo "index.html OK" || echo "index.html MISSING"
+            curl -s http://localhost/api/api-keys | head -c 200
+            echo ""
+            curl -s http://localhost/webhooks | head -c 200
