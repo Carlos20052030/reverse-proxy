@@ -1,0 +1,54 @@
+name: Test API Key Creation
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test API key creation via reverse proxy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            echo "=== Test 1: Login to get token ==="
+            LOGIN_RESPONSE=$(curl -s -X POST http://localhost:8081/auth/login \
+              -H "Content-Type: application/json" \
+              -d '{"email": "admin@nuntix.com.br", "password": "senha123"}')
+            echo "Login response: $LOGIN_RESPONSE"
+            TOKEN=$(echo "$LOGIN_RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+
+            if [ -n "$TOKEN" ]; then
+              echo "Got token: ${TOKEN:0:20}..."
+
+              echo ""
+              echo "=== Test 2: Create API key directly on bookmarks-api (port 8081) ==="
+              curl -X POST http://localhost:8081/api-keys \
+                -H "Content-Type: application/json" \
+                -H "Authorization: Bearer $TOKEN" \
+                -d '{"name": "test-direct"}' \
+                -v 2>&1 | head -30
+
+              echo ""
+              echo "=== Test 3: Create API key via reverse proxy (port 80/443) ==="
+              # Test through reverse proxy on localhost (HTTP)
+              curl -X POST http://localhost/api/api-keys \
+                -H "Content-Type: application/json" \
+                -H "Authorization: Bearer $TOKEN" \
+                -d '{"name": "test-via-proxy"}' \
+                -v 2>&1 | head -30
+            else
+              echo "Failed to get token"
+            fi
+
+            echo ""
+            echo "=== Test 4: Check webhooks.nuntix.com.br DNS and routing ==="
+            dig +short webhooks.nuntix.com.br
+
+            echo ""
+            echo "=== Test 5: Check webhook-dispatcher port ==="
+            docker exec webhook-dispatcher-dispatcher-1 netstat -tlnp 2>/dev/null | grep -E ":(8080|8082)" || ss -tlnp 2>/dev/null | grep -E ":(8080|8082)"
