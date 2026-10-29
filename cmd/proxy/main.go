@@ -41,7 +41,7 @@ func main() {
 	// Let's Encrypt configuration
 	certManager := autocert.Manager{
 		Prompt:     autocert.AcceptTOS,
-		Cache:      autocert.DirCache("certs"),
+		Cache:      autocert.DirCache("/app/certs"),
 		HostPolicy: autocert.HostWhitelist("nuntix.com.br", "api.nuntix.com.br", "webhooks.nuntix.com.br"),
 	}
 
