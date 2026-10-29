@@ -20,6 +20,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /home/carlos/reverse-proxy
-            git pull origin main
+            git fetch origin
+            git reset --hard origin/main
             docker compose build --no-cache
             docker compose up -d
