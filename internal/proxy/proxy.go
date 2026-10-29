@@ -182,6 +182,17 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				pr.SetURL(target)
 				pr.Out.Host = pr.In.Host
 				pr.SetXForwarded()
+
+				// Strip /api prefix from path before forwarding to backend
+				// Frontend calls /api/bookmarks, /api/api-keys, /api/webhooks, etc.
+				// Backend expects /bookmarks, /api-keys, /webhooks, etc.
+				if strings.HasPrefix(pr.Out.URL.Path, "/api/") {
+					pr.Out.URL.Path = strings.TrimPrefix(pr.Out.URL.Path, "/api")
+				}
+				// Also handle exact /api path
+				if pr.Out.URL.Path == "/api" {
+					pr.Out.URL.Path = "/"
+				}
 			},
 			ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
 				status := http.StatusBadGateway
