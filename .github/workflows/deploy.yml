@@ -15,7 +15,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.27'
 
       - name: Build
         run: go build ./...
@@ -30,12 +30,13 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.27'
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
+          install-mode: goinstall
 
   gosec:
     name: gosec
@@ -47,12 +48,13 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.27'
+
+      - name: Install gosec
+        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
 
       - name: Run gosec
-        uses: securego/gosec@master
-        with:
-          args: '-confidence=high -severity=critical ./...'
+        run: gosec -confidence=high -severity=critical ./...
 
   deploy:
     name: Deploy to VPS
