@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
  * Handles token management and automatic redirect on unauthorized access.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 interface RequestOptions extends RequestInit {
   requiresAuth?: boolean;
@@ -107,3 +107,15 @@ export const api = {
 };
 
 export default api;
+
+/**
+ * Safely parse JSON response, checking content-type first
+ */
+export async function safeJson<T>(response: Response): Promise<T> {
+  const contentType = response.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    const text = await response.text();
+    throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}: ${text.slice(0, 200)}`);
+  }
+  return response.json() as Promise<T>;
+}

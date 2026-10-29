@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../lib/api';
+import api, { safeJson } from '../lib/api';
 
 interface APIKey {
     id: string;
@@ -23,7 +23,7 @@ export default function ApiKeys() {
     const fetchKeys = async () => {
         try {
             const res = await api.get('/api-keys');
-            const data = await res.json();
+            const data = await safeJson<APIKey[]>(res);
             setKeys(Array.isArray(data) ? data : []);
         } catch (err) {
             // 401 errors are handled globally by the API client
@@ -40,9 +40,12 @@ export default function ApiKeys() {
         try {
             const res = await api.post('/api-keys', { name });
 
-            if (!res.ok) throw new Error('Failed to create key');
+            if (!res.ok) {
+                const errorData = await safeJson(res);
+                throw new Error(typeof errorData === 'object' && errorData && 'message' in errorData ? String(errorData.message) : 'Failed to create key');
+            }
 
-            const data = await res.json();
+            const data = await safeJson<{ raw_key: string }>(res);
             setNewRawKey(data.raw_key);
             setName('');
             fetchKeys();
@@ -58,7 +61,10 @@ export default function ApiKeys() {
 
         try {
             const res = await api.delete(`/api-keys/${id}`);
-            if (!res.ok) throw new Error('Failed to revoke');
+            if (!res.ok) {
+                const errorData = await safeJson(res);
+                throw new Error(typeof errorData === 'object' && errorData && 'message' in errorData ? String(errorData.message) : 'Failed to revoke');
+            }
             fetchKeys();
         } catch (err) {
             if (err instanceof Error && err.message !== 'Unauthorized - redirected to login') {

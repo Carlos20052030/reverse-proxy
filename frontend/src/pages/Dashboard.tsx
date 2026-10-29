@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../lib/api';
+import api, { safeJson } from '../lib/api';
 
 interface Bookmark {
     id: string;
@@ -24,8 +24,9 @@ export default function Dashboard() {
     const fetchBookmarks = async () => {
         try {
             const res = await api.get('/bookmarks');
-            const data = await res.json();
-            setBookmarks(data.bookmarks || data);
+            const data = await safeJson<{ bookmarks?: Bookmark[] } | Bookmark[]>(res);
+            const bookmarks = Array.isArray(data) ? data : (data.bookmarks || []);
+            setBookmarks(bookmarks);
         } catch (err) {
             if (err instanceof Error && err.message !== 'Unauthorized - redirected to login') {
                 setError(err.message);
@@ -43,7 +44,10 @@ export default function Dashboard() {
 
         try {
             const response = await api.post('/bookmarks', { title: newTitle, url: newUrl });
-            if (!response.ok) throw new Error('Failed to create bookmark');
+            if (!response.ok) {
+                const errorData = await safeJson(response);
+                throw new Error(typeof errorData === 'object' && errorData && 'message' in errorData ? String(errorData.message) : 'Failed to create bookmark');
+            }
 
             setNewTitle('');
             setNewUrl('');
@@ -61,7 +65,10 @@ export default function Dashboard() {
         if (!window.confirm("Delete this bookmark?")) return;
         try {
             const response = await api.delete(`/bookmarks/${id}`);
-            if (!response.ok) throw new Error('Failed to delete');
+            if (!response.ok) {
+                const errorData = await safeJson(response);
+                throw new Error(typeof errorData === 'object' && errorData && 'message' in errorData ? String(errorData.message) : 'Failed to delete');
+            }
             setBookmarks(bookmarks.filter(bm => bm.id !== id));
         } catch (err) {
             if (err instanceof Error && err.message !== 'Unauthorized - redirected to login') {

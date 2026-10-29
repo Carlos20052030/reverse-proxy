@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../lib/api';
+import api, { safeJson } from '../lib/api';
 
 interface Webhook {
     id: string;
@@ -29,7 +29,7 @@ export default function Webhooks() {
     const fetchWebhooks = async () => {
         try {
             const res = await api.get('/webhooks');
-            const data = await res.json();
+            const data = await safeJson<Webhook[]>(res);
             setWebhooks(Array.isArray(data) ? data : []);
         } catch (err) {
             if (err instanceof Error && err.message !== 'Unauthorized - redirected to login') {
@@ -55,17 +55,12 @@ export default function Webhooks() {
             });
 
             if (!res.ok) {
-                let errorMessage = 'Failed to create webhook';
-                try {
-                    const errorData = await res.json();
-                    if (errorData.message) errorMessage = errorData.message;
-                } catch {
-                    errorMessage = `Error ${res.status}: ${res.statusText}`;
-                }
+                const errorData = await safeJson(res);
+                const errorMessage = typeof errorData === 'object' && errorData && 'message' in errorData ? String(errorData.message) : 'Failed to create webhook';
                 throw new Error(errorMessage);
             }
 
-            const data = await res.json();
+            const data = await safeJson<Webhook>(res);
             // Use functional update to avoid stale closure
             setWebhooks(prev => [data, ...prev]);
 
@@ -92,13 +87,8 @@ export default function Webhooks() {
         try {
             const res = await api.delete(`/webhooks/${id}`);
             if (!res.ok) {
-                let errorMessage = 'Failed to delete';
-                try {
-                    const errorData = await res.json();
-                    if (errorData.message) errorMessage = errorData.message;
-                } catch {
-                    errorMessage = `Error ${res.status}: ${res.statusText}`;
-                }
+                const errorData = await safeJson(res);
+                const errorMessage = typeof errorData === 'object' && errorData && 'message' in errorData ? String(errorData.message) : 'Failed to delete';
                 throw new Error(errorMessage);
             }
             setWebhooks(webhooks.filter(w => w.id !== id));
