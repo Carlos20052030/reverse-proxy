@@ -1,0 +1,35 @@
+name: Check Webhook Dispatcher Port
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Check webhook dispatcher port mapping
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            echo "=== Check webhook-dispatcher container port mapping ==="
+            docker port webhook-dispatcher-dispatcher-1
+
+            echo ""
+            echo "=== Check all listening ports on host ==="
+            ss -tlnp | grep -E ":(8080|8082|8081)"
+
+            echo ""
+            echo "=== Test webhook dispatcher on host port 8082 ==="
+            curl -v http://localhost:8082/health 2>&1 | head -20
+
+            echo ""
+            echo "=== Test webhook dispatcher on host port 8080 ==="
+            curl -v http://localhost:8080/health 2>&1 | head -20
+
+            echo ""
+            echo "=== Check tenants table and fix if needed ==="
+            docker exec -i bookmarks-api-db-1 psql -U bookmarks -d webhook_dispatcher -c "SELECT host, target_url FROM tenants;"
