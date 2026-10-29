@@ -56,7 +56,7 @@ func main() {
 	// Main router
 	mainMux := http.NewServeMux()
 
-	// API Routes (go to the Proxy) - only /api/* prefix and specific backend routes
+	// API Routes (go to the Proxy) - /api/* prefix (new frontend) and specific backend routes (backward compat)
 	mainMux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		p.ServeHTTP(w, r)
 	})
@@ -75,7 +75,19 @@ func main() {
 	mainMux.HandleFunc("/tags/", func(w http.ResponseWriter, r *http.Request) {
 		p.ServeHTTP(w, r)
 	})
-		mainMux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+	mainMux.HandleFunc("/api-keys", func(w http.ResponseWriter, r *http.Request) {
+		p.ServeHTTP(w, r)
+	})
+	mainMux.HandleFunc("/api-keys/", func(w http.ResponseWriter, r *http.Request) {
+		p.ServeHTTP(w, r)
+	})
+	mainMux.HandleFunc("/webhooks", func(w http.ResponseWriter, r *http.Request) {
+		p.ServeHTTP(w, r)
+	})
+	mainMux.HandleFunc("/webhooks/", func(w http.ResponseWriter, r *http.Request) {
+		p.ServeHTTP(w, r)
+	})
+	mainMux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
 		p.ServeHTTP(w, r)
 	})
 
