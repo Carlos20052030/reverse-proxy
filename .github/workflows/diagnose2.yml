@@ -1,0 +1,68 @@
+name: Diagnose VPS 2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    name: Diagnose VPS 2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Diagnose via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            echo "=== All Docker Containers ==="
+            docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
+
+            echo ""
+            echo "=== bookmarks-api logs (trying multiple names) ==="
+            for name in bookmarks-api bookmarks-api-api-1 api; do
+              if docker ps -qf "name=$name" | grep -q .; then
+                echo "Found container: $name"
+                docker logs $(docker ps -qf "name=$name") --tail 100
+                break
+              fi
+            done
+
+            echo ""
+            echo "=== webhooks dispatcher logs ==="
+            for name in webhooks-dispatcher webhook webhooks; do
+              if docker ps -qf "name=$name" | grep -q .; then
+                echo "Found container: $name"
+                docker logs $(docker ps -qf "name=$name") --tail 50
+                break
+              fi
+            done
+
+            echo ""
+            echo "=== postgres container ==="
+            docker ps -qf "name=postgres" || docker ps -qf "name=db" || docker ps -qf "name=database"
+
+            echo ""
+            echo "=== Check tenants table via direct psql ==="
+            PG_CONTAINER=$(docker ps -qf "name=postgres" || docker ps -qf "name=db" || docker ps -qf "name=database" | head -1)
+            if [ -n "$PG_CONTAINER" ]; then
+              echo "Using container: $PG_CONTAINER"
+              docker exec -i "$PG_CONTAINER" psql -U bookmarks -d webhook_dispatcher -c "SELECT host, target_url FROM tenants;"
+              echo ""
+              echo "=== Check api_keys table schema ==="
+              docker exec -i "$PG_CONTAINER" psql -U bookmarks -d webhook_dispatcher -c "\d api_keys"
+            else
+              echo "No postgres container found"
+            fi
+
+            echo ""
+            echo "=== Check if bookmarks-api is listening on port ==="
+            netstat -tlnp 2>/dev/null | grep -E ":(8080|8081|3000|4000)" || ss -tlnp 2>/dev/null | grep -E ":(8080|8081|3000|4000)"
+
+            echo ""
+            echo "=== DNS for webhooks.nuntix.com.br ==="
+            dig +short webhooks.nuntix.com.br
+
+            echo ""
+            echo "=== Check reverse-proxy config for webhooks host ==="
+            docker exec reverse-proxy cat /etc/hosts 2>/dev/null || echo "No /etc/hosts in container"
