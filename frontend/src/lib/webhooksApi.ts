@@ -1,11 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 
 /**
- * Webhooks API client - connects to webhooks.nuntix.com.br
- * Separate from main API client because webhooks dispatcher runs on a different backend.
+ * Webhooks API client - uses relative path /api/webhooks
+ * The reverse proxy routes /api/webhooks to the webhooks dispatcher backend.
  */
 
-const WEBHOOKS_API_BASE_URL = import.meta.env.VITE_WEBHOOKS_API_URL || 'https://webhooks.nuntix.com.br';
+const WEBHOOKS_API_BASE_URL = '/api/webhooks';
 
 interface RequestOptions extends RequestInit {
   requiresAuth?: boolean;
