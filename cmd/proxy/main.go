@@ -180,13 +180,20 @@ func main() {
 
 // serveReactApp serves the React SPA (index.html for non-existent files)
 func serveReactApp(w http.ResponseWriter, r *http.Request, staticDir string, fs http.Handler) {
-	// Try to serve the requested file
-	path := filepath.Join(staticDir, r.URL.Path)
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	// Use os.DirFS for safe path handling (prevents path traversal)
+	fsys := os.DirFS(staticDir)
+
+	// Clean the request path to prevent traversal, then check if file exists
+	cleanPath := filepath.Clean(r.URL.Path)
+	// Remove leading slash for fsys.Open
+	cleanPath = strings.TrimPrefix(cleanPath, "/")
+
+	// Check if file exists using the safe filesystem abstraction
+	if _, err := fsys.Open(cleanPath); err != nil {
 		// File doesn't exist, serve index.html for SPA routing
 		http.ServeFile(w, r, filepath.Join(staticDir, "index.html"))
 		return
 	}
-	// File exists, serve it
+	// File exists, serve it via the FileServer
 	fs.ServeHTTP(w, r)
 }
