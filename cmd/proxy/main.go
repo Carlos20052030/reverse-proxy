@@ -117,8 +117,12 @@ func main() {
 		case "nuntix.com.br":
 			// REGRA 2: Path-based routing for main host
 			if strings.HasPrefix(path, "/api/webhooks") {
-				// /api/webhooks* → webhook-dispatcher (strip /api prefix so backend receives /webhooks*)
-				r.URL.Path = strings.TrimPrefix(path, "/api")
+				// /api/webhooks* → webhook-dispatcher (strip /api/webhooks prefix so backend receives /webhooks, /deliveries, /events, etc.)
+				r.URL.Path = strings.TrimPrefix(path, "/api/webhooks")
+				// Handle root case (empty path becomes /)
+				if r.URL.Path == "" {
+					r.URL.Path = "/"
+				}
 				webhookProxy.ServeHTTP(w, r)
 				return
 			}
