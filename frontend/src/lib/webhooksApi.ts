@@ -107,6 +107,38 @@ export const webhooksApi = {
 
 export default webhooksApi;
 
+export interface Delivery {
+  id: string;
+  event_id: string;
+  endpoint_id: string;
+  event_type: string;
+  status: 'pending' | 'queued' | 'in_flight' | 'succeeded' | 'dead';
+  attempts: number;
+  next_attempt_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DeliveriesResponse {
+  deliveries: Delivery[];
+  next_cursor?: string;
+}
+
+/**
+ * Fetch deliveries for a specific webhook (endpoint)
+ */
+export async function fetchDeliveries(endpointId: string): Promise<DeliveriesResponse> {
+  const res = await webhooksApi.get(`/deliveries?endpoint_id=${endpointId}&limit=50`);
+  if (!res.ok) {
+    const errorData = await safeJson(res);
+    const errorMessage = typeof errorData === 'object' && errorData && 'message' in errorData
+      ? String(errorData.message)
+      : `Error ${res.status}: ${res.statusText}`;
+    throw new Error(errorMessage);
+  }
+  return safeJson<DeliveriesResponse>(res);
+}
+
 /**
  * Safely parse JSON response, checking content-type first
  */

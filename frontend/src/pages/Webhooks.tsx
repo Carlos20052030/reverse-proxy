@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import webhooksApi, { safeJson } from '../lib/webhooksApi';
+import webhooksApi, { safeJson, fetchDeliveries, type Delivery } from '../lib/webhooksApi';
 
 interface Webhook {
     id: string;
@@ -23,12 +23,26 @@ export default function Webhooks() {
     const [newEvents, setNewEvents] = useState('push,pull_request');
     const [newSecret, setNewSecret] = useState('');
 
+    // Delivery history modal state
+    const [showDeliveriesModal, setShowDeliveriesModal] = useState(false);
+    const [selectedWebhook, setSelectedWebhook] = useState<Webhook | null>(null);
+    const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+    const [deliveriesLoading, setDeliveriesLoading] = useState(false);
+    const [deliveriesError, setDeliveriesError] = useState('');
+
     // Set navigate for global 401 redirect
     webhooksApi.setNavigate(navigate);
 
     const fetchWebhooks = async () => {
         try {
             const res = await webhooksApi.get('/webhooks');
+            if (!res.ok) {
+                const errorData = await safeJson(res);
+                const errorMessage = typeof errorData === 'object' && errorData && 'message' in errorData
+                    ? String(errorData.message)
+                    : `Error ${res.status}: ${res.statusText}`;
+                throw new Error(errorMessage);
+            }
             const data = await safeJson<Webhook[]>(res);
             setWebhooks(Array.isArray(data) ? data : []);
         } catch (err) {
@@ -99,6 +113,25 @@ export default function Webhooks() {
         }
     };
 
+    const handleViewHistory = async (webhook: Webhook) => {
+        setSelectedWebhook(webhook);
+        setDeliveries([]);
+        setDeliveriesError('');
+        setDeliveriesLoading(true);
+        setShowDeliveriesModal(true);
+
+        try {
+            const data = await fetchDeliveries(webhook.id);
+            setDeliveries(data.deliveries);
+        } catch (err) {
+            if (err instanceof Error && err.message !== 'Unauthorized - redirected to login') {
+                setDeliveriesError(err.message);
+            }
+        } finally {
+            setDeliveriesLoading(false);
+        }
+    };
+
     const getStatusBadge = (status: Webhook['status']) => (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
             status === 'active'
@@ -108,6 +141,21 @@ export default function Webhooks() {
             {status}
         </span>
     );
+
+    const getDeliveryStatusBadge = (status: Delivery['status']) => {
+        const colors: Record<Delivery['status'], string> = {
+            succeeded: 'bg-green-100 text-green-800',
+            pending: 'bg-yellow-100 text-yellow-800',
+            queued: 'bg-blue-100 text-blue-800',
+            in_flight: 'bg-purple-100 text-purple-800',
+            dead: 'bg-red-100 text-red-800',
+        };
+        return (
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[status] || 'bg-gray-100 text-gray-800'}`}>
+                {status}
+            </span>
+        );
+    };
 
     return (
         <>
@@ -182,6 +230,12 @@ export default function Webhooks() {
                                                 })}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <button
+                                                    onClick={() => handleViewHistory(wh)}
+                                                    className="text-indigo-600 hover:text-indigo-900 mr-4"
+                                                >
+                                                    Ver Histórico
+                                                </button>
                                                 <button
                                                     onClick={() => handleDelete(wh.id)}
                                                     className="text-red-600 hover:text-red-900"
@@ -274,6 +328,106 @@ export default function Webhooks() {
                                         </button>
                                     </div>
                                 </form>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Delivery History Modal */}
+                {showDeliveriesModal && selectedWebhook && (
+                    <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="deliveries-modal-title">
+                        <div className="flex min-h-full items-center justify-center p-4">
+                            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowDeliveriesModal(false)} />
+                            <div className="relative w-full max-w-4xl bg-white rounded-lg shadow-xl transform transition-all max-h-[80vh] flex flex-col">
+                                <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                                    <h2 id="deliveries-modal-title" className="text-lg font-semibold text-gray-900">
+                                        Histórico de Entregas - {selectedWebhook.url}
+                                    </h2>
+                                    <button
+                                        onClick={() => setShowDeliveriesModal(false)}
+                                        className="text-gray-400 hover:text-gray-500 text-2xl leading-none p-1"
+                                        aria-label="Fechar modal"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                                <div className="p-6 overflow-y-auto flex-1">
+                                    {deliveriesLoading ? (
+                                        <div className="text-center py-12 text-gray-500">
+                                            Carregando histórico de entregas...
+                                        </div>
+                                    ) : deliveriesError ? (
+                                        <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-700" role="alert">
+                                            Erro ao carregar entregas: {deliveriesError}
+                                        </div>
+                                    ) : deliveries.length === 0 ? (
+                                        <div className="text-center py-12 text-gray-500">
+                                            Nenhuma entrega encontrada para este webhook.
+                                        </div>
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full divide-y divide-gray-200" role="table">
+                                                <thead className="bg-gray-50 sticky top-0">
+                                                    <tr>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Evento</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tentativas</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data/Hora</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Próxima Tentativa</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="bg-white divide-y divide-gray-200">
+                                                    {deliveries.map((delivery) => (
+                                                        <tr key={delivery.id} className="hover:bg-gray-50 transition-colors">
+                                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                                {getDeliveryStatusBadge(delivery.status)}
+                                                            </td>
+                                                            <td className="px-6 py-4">
+                                                                <div className="text-sm text-gray-900 font-mono">{delivery.event_type}</div>
+                                                                <div className="text-xs text-gray-500 font-mono break-all max-w-md mt-1">{delivery.event_id}</div>
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                                                {delivery.attempts}
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                                {new Date(delivery.created_at).toLocaleDateString('pt-BR', {
+                                                                    day: '2-digit',
+                                                                    month: '2-digit',
+                                                                    year: 'numeric',
+                                                                    hour: '2-digit',
+                                                                    minute: '2-digit',
+                                                                    second: '2-digit'
+                                                                })}
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                                {delivery.next_attempt_at ? (
+                                                                    new Date(delivery.next_attempt_at).toLocaleDateString('pt-BR', {
+                                                                        day: '2-digit',
+                                                                        month: '2-digit',
+                                                                        year: 'numeric',
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit',
+                                                                        second: '2-digit'
+                                                                    })
+                                                                ) : (
+                                                                    <span className="text-gray-400">—</span>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+                                    <button
+                                        onClick={() => setShowDeliveriesModal(false)}
+                                        className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-100 transition-colors"
+                                    >
+                                        Fechar
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
