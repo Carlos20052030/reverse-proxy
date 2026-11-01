@@ -1,6 +1,6 @@
 services:
   proxy:
-    build: .
+    image: ghcr.io/carlos20052030/reverse-proxy:latest
     container_name: reverse-proxy
     restart: unless-stopped
     network_mode: "host"
