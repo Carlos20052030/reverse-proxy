@@ -38,6 +38,12 @@ func ParsePlan(s string) (Plan, error) {
 	}
 }
 
+// ParsePlanOrDefault parses a string into a Plan, defaulting to Free on error.
+func ParsePlanOrDefault(s string) Plan {
+	plan, _ := ParsePlan(s)
+	return plan
+}
+
 // QuotaLimits defines the resource limits for a plan.
 type QuotaLimits struct {
 	MaxWebhooks         int
