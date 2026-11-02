@@ -21,6 +21,9 @@ export default function Register() {
 
             if (token) {
                 localStorage.setItem('token', token);
+                if (data.refresh_token) {
+                    localStorage.setItem('refresh_token', data.refresh_token);
+                }
                 window.location.href = '/dashboard';
             }
         } catch (err) {
