@@ -1,17 +1,23 @@
 import { useNavigate } from 'react-router-dom';
 
 /**
- * Centralized API client with global 401 interceptor.
- * Handles token management and automatic redirect on unauthorized access.
+ * Centralized API client with global 401 interceptor and silent token refresh.
+ * Handles token management, automatic refresh on 401, and redirect on unauthorized access.
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 interface RequestOptions extends RequestInit {
   requiresAuth?: boolean;
+  _retry?: boolean;
 }
 
 let navigateRef: ReturnType<typeof useNavigate> | null = null;
+let isRefreshing = false;
+let failedRequestsQueue: Array<{
+  resolve: (value: Response) => void;
+  reject: (reason: Error) => void;
+}> = [];
 
 /**
  * Sets the navigate function for redirects (called from a component)
@@ -28,10 +34,32 @@ function getToken(): string | null {
 }
 
 /**
+ * Gets the refresh token from localStorage
+ */
+function getRefreshToken(): string | null {
+  return localStorage.getItem('refresh_token');
+}
+
+/**
+ * Saves the access token to localStorage
+ */
+function setToken(token: string): void {
+  localStorage.setItem('token', token);
+}
+
+/**
+ * Saves the refresh token to localStorage
+ */
+function setRefreshToken(token: string): void {
+  localStorage.setItem('refresh_token', token);
+}
+
+/**
  * Clears auth state and redirects to login
  */
 function handleUnauthorized() {
   localStorage.removeItem('token');
+  localStorage.removeItem('refresh_token');
   if (navigateRef) {
     navigateRef('/login');
   } else {
@@ -40,10 +68,60 @@ function handleUnauthorized() {
 }
 
 /**
- * Core fetch wrapper with global 401 interceptor
+ * Processes the queue of failed requests after a successful token refresh
  */
-async function apiFetch(endpoint: string, options: RequestOptions = {}) {
-  const { requiresAuth = true, headers = {}, ...fetchOptions } = options;
+function processQueue(error: Error | null, token: string | null = null) {
+  failedRequestsQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve(token as unknown as Response);
+    }
+  });
+  failedRequestsQueue = [];
+}
+
+/**
+ * Attempts to refresh the access token using the refresh token
+ */
+async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    if (data.access_token) {
+      setToken(data.access_token);
+      if (data.refresh_token) {
+        setRefreshToken(data.refresh_token);
+      }
+      return data.access_token;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Core fetch wrapper with global 401 interceptor and silent token refresh
+ */
+async function apiFetch(endpoint: string, options: RequestOptions = {}): Promise<Response> {
+  const { requiresAuth = true, _retry = false, headers = {}, ...fetchOptions } = options;
 
   const requestHeaders: HeadersInit = {
     'Content-Type': 'application/json',
@@ -62,11 +140,50 @@ async function apiFetch(endpoint: string, options: RequestOptions = {}) {
     headers: requestHeaders,
   });
 
-  // Global 401 interceptor
+  // Global 401 interceptor with silent token refresh
   if (response.status === 401) {
-    handleUnauthorized();
-    // Throw an error to stop further processing
-    throw new Error('Unauthorized - redirected to login');
+    // Don't try to refresh the refresh endpoint itself to avoid infinite loops
+    const isRefreshEndpoint = endpoint === '/auth/refresh';
+
+    // If already retried, or it's the refresh endpoint, or no refresh token, redirect to login
+    if (_retry || isRefreshEndpoint || !getRefreshToken()) {
+      handleUnauthorized();
+      throw new Error('Unauthorized - redirected to login');
+    }
+
+    // If a refresh is already in progress, queue this request
+    if (isRefreshing) {
+      return new Promise<Response>((resolve, reject) => {
+        failedRequestsQueue.push({ resolve, reject });
+      }).then((): Promise<Response> => {
+        // Retry the original request with the new token
+        return apiFetch(endpoint, { ...options, _retry: true });
+      });
+    }
+
+    // Start the refresh process
+    isRefreshing = true;
+
+    try {
+      const newToken = await refreshAccessToken();
+      if (newToken) {
+        // Refresh successful - process queued requests and retry the original
+        processQueue(null, newToken);
+        return apiFetch(endpoint, { ...options, _retry: true });
+      } else {
+        // Refresh failed - process queue with error and redirect to login
+        processQueue(new Error('Token refresh failed'));
+        handleUnauthorized();
+        throw new Error('Unauthorized - redirected to login');
+      }
+    } catch (error) {
+      // Any error during refresh - process queue with error and redirect
+      processQueue(error instanceof Error ? error : new Error('Token refresh failed'));
+      handleUnauthorized();
+      throw new Error('Unauthorized - redirected to login');
+    } finally {
+      isRefreshing = false;
+    }
   }
 
   return response;

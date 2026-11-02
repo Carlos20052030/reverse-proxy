@@ -124,6 +124,25 @@ const mockFetch401 = () => {
     });
 };
 
+// Mock the refresh endpoint to return 401 (simulating expired refresh token)
+const mockFetchRefresh401 = () => {
+    (global.fetch as any).mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+        headers: {
+            get: (name: string) => {
+                if (name.toLowerCase() === 'content-type') {
+                    return 'application/json';
+                }
+                return null;
+            },
+        },
+        json: () => Promise.resolve({ message: 'Invalid refresh token' }),
+        text: () => Promise.resolve('Invalid refresh token'),
+    });
+};
+
 describe('Billing Page - Loading & Display', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -359,6 +378,7 @@ describe('Billing Page - Upgrade Flow', () => {
         await waitForLoading();
 
         mockFetch401();
+        mockFetchRefresh401(); // Refresh token also expired
 
         const upgradeButton = screen.getByRole('button', { name: 'Fazer Upgrade para Pro' });
         await userEvent.click(upgradeButton);
@@ -406,6 +426,7 @@ describe('Billing Page - Errors', () => {
 
     it('redirects to login on 401 Unauthorized', async () => {
         mockFetch401();
+        mockFetchRefresh401(); // Refresh token also expired
         renderWithRouter();
 
         await waitFor(() => {
