@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
  * Handles token management, automatic refresh on 401, and redirect on unauthorized access.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = '';
 
 interface RequestOptions extends RequestInit {
   requiresAuth?: boolean;

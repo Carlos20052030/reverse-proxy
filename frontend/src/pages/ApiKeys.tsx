@@ -22,7 +22,8 @@ export default function ApiKeys() {
 
     const fetchKeys = async () => {
         try {
-            const res = await api.get('/api-keys');
+            // Using explicit /api prefix since api.ts no longer prepends base URL
+            const res = await api.get('/api/api-keys');
             const data = await safeJson<APIKey[]>(res);
             setKeys(Array.isArray(data) ? data : []);
         } catch (err) {
@@ -38,7 +39,8 @@ export default function ApiKeys() {
         e.preventDefault();
 
         try {
-            const res = await api.post('/api-keys', { name });
+            // Using explicit /api prefix since api.ts no longer prepends base URL
+            const res = await api.post('/api/api-keys', { name });
 
             if (!res.ok) {
                 const errorData = await safeJson(res);

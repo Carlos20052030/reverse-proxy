@@ -23,7 +23,8 @@ export default function Dashboard() {
 
     const fetchBookmarks = async () => {
         try {
-            const res = await api.get('/bookmarks');
+            // Using explicit /api prefix since api.ts no longer prepends base URL
+            const res = await api.get('/api/bookmarks');
             const data = await safeJson<{ bookmarks?: Bookmark[] } | Bookmark[]>(res);
             const bookmarks = Array.isArray(data) ? data : (data.bookmarks || []);
             setBookmarks(bookmarks);
@@ -43,7 +44,8 @@ export default function Dashboard() {
         setIsSubmitting(true);
 
         try {
-            const response = await api.post('/bookmarks', { title: newTitle, url: newUrl });
+            // Using explicit /api prefix since api.ts no longer prepends base URL
+            const response = await api.post('/api/bookmarks', { title: newTitle, url: newUrl });
             if (!response.ok) {
                 const errorData = await safeJson(response);
                 throw new Error(typeof errorData === 'object' && errorData && 'message' in errorData ? String(errorData.message) : 'Failed to create bookmark');
