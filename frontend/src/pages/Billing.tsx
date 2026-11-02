@@ -27,6 +27,7 @@ export default function Billing() {
     const fetchUsage = async () => {
         try {
             setError('');
+            // api.ts prepends API_BASE_URL (/api) -> results in /api/billing/usage
             const res = await api.get('/billing/usage');
 
             if (!res.ok) {
@@ -67,6 +68,7 @@ export default function Billing() {
         setUpgradeError('');
 
         try {
+            // api.ts prepends API_BASE_URL (/api) -> results in /api/billing/checkout
             const res = await api.get('/billing/checkout');
 
             if (!res.ok) {
