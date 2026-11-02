@@ -4,6 +4,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import ApiKeys from './pages/ApiKeys';
 import Webhooks from './pages/Webhooks';
+import Billing from './pages/Billing';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
 
@@ -17,6 +18,7 @@ function App() {
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/api-keys" element={<ApiKeys />} />
                     <Route path="/webhooks" element={<Webhooks />} />
+                    <Route path="/billing" element={<Billing />} />
                 </Route>
                 {/* Redirect root to login */}
                 <Route path="/" element={<Navigate to="/login" replace />} />
