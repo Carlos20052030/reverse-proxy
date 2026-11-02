@@ -349,7 +349,7 @@ describe('Webhooks Page - Interactions', () => {
 
         // Verify POST was called with correct data (second call, first is GET)
         expect(global.fetch).toHaveBeenCalledTimes(2);
-        expect(global.fetch).toHaveBeenNthCalledWith(2, 'https://webhooks.nuntix.com.br/webhooks', expect.objectContaining({
+        expect(global.fetch).toHaveBeenNthCalledWith(2, '/api/webhooks/webhooks', expect.objectContaining({
             method: 'POST',
             headers: expect.objectContaining({
                 'Content-Type': 'application/json',
@@ -402,7 +402,7 @@ describe('Webhooks Page - Interactions', () => {
         expect(screen.getByText('https://staging.example.com/hooks/deploy')).toBeInTheDocument();
 
         // Verify DELETE was called with correct URL
-        expect(global.fetch).toHaveBeenCalledWith('https://webhooks.nuntix.com.br/webhooks/wh_1', expect.objectContaining({
+        expect(global.fetch).toHaveBeenCalledWith('/api/webhooks/webhooks/wh_1', expect.objectContaining({
             method: 'DELETE',
             headers: expect.objectContaining({
                 'Authorization': 'Bearer mock-token',
@@ -536,7 +536,7 @@ describe('Webhooks Page - Auth', () => {
         // but we can verify the component handles missing token
         // The fetch is still called but without Authorization header
         expect(global.fetch).toHaveBeenCalledTimes(1);
-        expect(global.fetch).toHaveBeenCalledWith('https://webhooks.nuntix.com.br/webhooks', expect.objectContaining({
+        expect(global.fetch).toHaveBeenCalledWith('/api/webhooks/webhooks', expect.objectContaining({
             method: 'GET',
             headers: expect.objectContaining({
                 'Content-Type': 'application/json',
