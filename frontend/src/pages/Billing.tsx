@@ -102,7 +102,14 @@ export default function Billing() {
     };
 
     const formatDate = (dateString: string): string => {
-        return new Date(dateString).toLocaleDateString('pt-BR', {
+        if (!dateString || dateString.trim() === '') {
+            return 'Sem data de renovação';
+        }
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) {
+            return 'Sem data de renovação';
+        }
+        return date.toLocaleDateString('pt-BR', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric',
