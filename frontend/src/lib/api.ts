@@ -135,6 +135,9 @@ async function apiFetch(endpoint: string, options: RequestOptions = {}): Promise
     }
   }
 
+  // Debug: log the exact URL being requested
+  console.log('[apiFetch] Request URL:', `${API_BASE_URL}${endpoint}`);
+
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...fetchOptions,
     headers: requestHeaders,
