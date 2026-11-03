@@ -78,5 +78,5 @@ jobs:
           command_timeout: 20m
           script: |
             cd /home/carlos/reverse-proxy
-            docker pull ghcr.io/carlos20052030/reverse-proxy:latest
-            docker compose up -d
+            docker compose pull
+            docker compose up -d --force-recreate

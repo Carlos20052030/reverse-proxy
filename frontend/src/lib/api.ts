@@ -91,7 +91,7 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+    const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -146,7 +146,7 @@ async function apiFetch(endpoint: string, options: RequestOptions = {}): Promise
   // Global 401 interceptor with silent token refresh
   if (response.status === 401) {
     // Don't try to refresh the refresh endpoint itself to avoid infinite loops
-    const isRefreshEndpoint = endpoint === '/auth/refresh';
+    const isRefreshEndpoint = endpoint === '/api/auth/refresh';
 
     // If already retried, or it's the refresh endpoint, or no refresh token, redirect to login
     if (_retry || isRefreshEndpoint || !getRefreshToken()) {
