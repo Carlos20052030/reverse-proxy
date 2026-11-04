@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { Suspense } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -8,21 +9,24 @@ import Billing from './pages/Billing';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
 
+const LandingPage = React.lazy(() => import('./pages/LandingPage'));
+
 function App() {
     return (
         <BrowserRouter>
-            <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route element={<ProtectedRoute />}>
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/api-keys" element={<ApiKeys />} />
-                    <Route path="/webhooks" element={<Webhooks />} />
-                    <Route path="/billing" element={<Billing />} />
-                </Route>
-                {/* Redirect root to login */}
-                <Route path="/" element={<Navigate to="/login" replace />} />
-            </Routes>
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent" /></div>}>
+                <Routes>
+                    <Route path="/" element={<LandingPage />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route element={<ProtectedRoute />}>
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/api-keys" element={<ApiKeys />} />
+                        <Route path="/webhooks" element={<Webhooks />} />
+                        <Route path="/billing" element={<Billing />} />
+                    </Route>
+                </Routes>
+            </Suspense>
         </BrowserRouter>
     );
 }
