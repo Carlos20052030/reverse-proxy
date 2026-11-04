@@ -15,7 +15,7 @@ interface CheckoutResponse {
 
 export default function Billing() {
     const navigate = useNavigate();
-    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams] = useSearchParams();
     const [usage, setUsage] = useState<UsageData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
