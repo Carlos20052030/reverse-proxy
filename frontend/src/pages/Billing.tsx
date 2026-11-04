@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api, { safeJson } from '../lib/api';
 
 interface UsageData {
@@ -15,11 +15,13 @@ interface CheckoutResponse {
 
 export default function Billing() {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [usage, setUsage] = useState<UsageData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [upgradeLoading, setUpgradeLoading] = useState(false);
     const [upgradeError, setUpgradeError] = useState('');
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
     // Set navigate for global 401 redirect
     api.setNavigate(navigate);
@@ -56,6 +58,29 @@ export default function Billing() {
             setLoading(false);
         }
     };
+
+    // Handle checkout success/cancel query parameters
+    useEffect(() => {
+        const checkout = searchParams.get('checkout');
+        if (checkout === 'success') {
+            setToast({ message: 'Pagamento aprovado! Bem-vindo ao Pro.', type: 'success' });
+            fetchUsage(); // Refetch billing data to ensure UI is up to date
+            // Clean up URL
+            window.history.replaceState(null, '', window.location.pathname);
+        } else if (checkout === 'canceled' || checkout === 'cancel') {
+            setToast({ message: 'Pagamento cancelado.', type: 'error' });
+            // Clean up URL
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+    }, [searchParams]);
+
+    // Auto-dismiss toast after 5 seconds
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [toast]);
 
     useEffect(() => {
         fetchUsage();
@@ -130,6 +155,12 @@ export default function Billing() {
 
     return (
         <>
+            {toast && (
+                <div className={`mb-6 p-4 rounded-md ${toast.type === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`} role="alert">
+                    {toast.message}
+                </div>
+            )}
+
             <div className="mb-8">
                 <h1 className="text-2xl font-bold text-gray-900">Billing & Usage</h1>
             </div>
