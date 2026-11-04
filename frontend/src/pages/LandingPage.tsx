@@ -1,5 +1,6 @@
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
 
 const features = [
   {
@@ -109,6 +110,15 @@ function PricingCard({ name, price, period, description, features, cta, variant,
 }
 
 export default function LandingPage() {
+  useEffect(() => {
+    const html = document.documentElement;
+    const originalScrollBehavior = html.style.scrollBehavior;
+    html.style.scrollBehavior = 'smooth';
+    return () => {
+      html.style.scrollBehavior = originalScrollBehavior;
+    };
+  }, []);
+
   return (
     <>
       <Helmet>
@@ -151,8 +161,8 @@ export default function LandingPage() {
                 <span className="text-xl font-bold text-gray-900 dark:text-white">Nuntix</span>
               </div>
               <div className="hidden md:flex items-center gap-8">
-                <Link to="#features" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors text-sm font-medium">Funcionalidades</Link>
-                <Link to="#pricing" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors text-sm font-medium">Preços</Link>
+                <a href="#features" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors text-sm font-medium">Funcionalidades</a>
+                <a href="#pricing" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors text-sm font-medium">Preços</a>
                 <Link to="/login" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors text-sm font-medium">Entrar</Link>
                 <Link to="/register" className="px-4 py-2 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 transition-colors text-sm">Começar Grátis</Link>
               </div>
@@ -183,12 +193,12 @@ export default function LandingPage() {
                 >
                   Começar Grátis →
                 </Link>
-                <Link
-                  to="#features"
+                <a
+                  href="#features"
                   className="w-full sm:w-auto px-8 py-4 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-xl font-semibold text-lg border-2 border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700 transition-all duration-200"
                 >
                   Ver Funcionalidades
-                </Link>
+                </a>
               </div>
               <p className="mt-6 text-sm text-gray-500 dark:text-gray-400">
                 Sem cartão de crédito • Cancelamento a qualquer momento • {plans[0].features[0]}
