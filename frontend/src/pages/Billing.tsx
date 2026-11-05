@@ -133,8 +133,8 @@ export default function Billing() {
         setPortalLoading(true);
 
         try {
-            // Backend route is /billing/portal (reverse proxy handles routing)
-            const res = await api.post('/billing/portal', {});
+            // Backend route is /api/billing/portal (reverse proxy requires /api prefix)
+            const res = await api.post('/api/billing/portal', {});
 
             if (!res.ok) {
                 let errorMessage = `Error ${res.status}: ${res.statusText}`;
