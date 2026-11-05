@@ -22,7 +22,6 @@ export default function Billing() {
     const [upgradeLoading, setUpgradeLoading] = useState(false);
     const [upgradeError, setUpgradeError] = useState('');
     const [portalLoading, setPortalLoading] = useState(false);
-    const [portalError, setPortalError] = useState('');
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
     // Set navigate for global 401 redirect
@@ -132,7 +131,6 @@ export default function Billing() {
         if (portalLoading || usage?.plan !== 'pro') return;
 
         setPortalLoading(true);
-        setPortalError('');
 
         try {
             // Backend route is /billing/portal (reverse proxy handles routing)
@@ -161,7 +159,6 @@ export default function Billing() {
             }
         } catch (err) {
             if (err instanceof Error && err.message !== 'Unauthorized - redirected to login') {
-                setPortalError(err.message);
                 // Also show as toast
                 setToast({ message: err.message, type: 'error' });
             }
