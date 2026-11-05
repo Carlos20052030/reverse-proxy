@@ -6,6 +6,8 @@ import Dashboard from './pages/Dashboard';
 import ApiKeys from './pages/ApiKeys';
 import Webhooks from './pages/Webhooks';
 import Billing from './pages/Billing';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
 
@@ -19,6 +21,8 @@ function App() {
                     <Route path="/" element={<LandingPage />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/terms" element={<Terms />} />
+                    <Route path="/privacy" element={<Privacy />} />
                     <Route element={<ProtectedRoute />}>
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/api-keys" element={<ApiKeys />} />

@@ -334,8 +334,8 @@ export default function LandingPage() {
                 © {new Date().getFullYear()} Nuntix. Todos os direitos reservados.
               </p>
               <div className="flex items-center gap-6">
-                <a href="/privacy" className="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Privacidade</a>
-                <a href="/terms" className="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Termos</a>
+                <Link to="/privacy" className="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Privacidade</Link>
+                <Link to="/terms" className="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Termos</Link>
                 <a href="/cookies" className="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Cookies</a>
               </div>
             </div>

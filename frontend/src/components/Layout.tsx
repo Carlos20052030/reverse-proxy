@@ -5,7 +5,8 @@ export function Layout() {
 
     const handleLogout = () => {
         localStorage.removeItem('token');
-        navigate('/');
+        localStorage.removeItem('refresh_token');
+        navigate('/login');
     };
 
     return (
