@@ -7,17 +7,27 @@ export default function Register() {
     const [password, setPassword] = useState('');
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
+    const [termsError, setTermsError] = useState(false);
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
     const clearErrors = () => {
         setEmailError('');
         setPasswordError('');
+        setTermsError(false);
     };
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         clearErrors();
+
+        if (!acceptedTerms) {
+            setTermsError(true);
+            setToast({ message: 'Você deve aceitar os termos para continuar.', type: 'error' });
+            return;
+        }
+
         setLoading(true);
 
         try {
@@ -120,10 +130,40 @@ export default function Register() {
                         </div>
                     </div>
 
+                    {/* Terms and Privacy Policy Checkbox */}
+                    <div className="flex items-start gap-3">
+                        <input
+                            type="checkbox"
+                            id="acceptedTerms"
+                            checked={acceptedTerms}
+                            onChange={(e) => { setAcceptedTerms(e.target.checked); setTermsError(false); }}
+                            required
+                            className={`h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 focus:ring-2 transition-colors ${
+                                termsError ? 'border-red-500' : ''
+                            }`}
+                            aria-describedby="terms-error"
+                        />
+                        <label htmlFor="acceptedTerms" className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                            Eu concordo com os{' '}
+                            <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-500 underline font-medium">
+                                Termos de Uso
+                            </Link>{' '}
+                            e{' '}
+                            <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-500 underline font-medium">
+                                Política de Privacidade
+                            </Link>
+                        </label>
+                    </div>
+                    {termsError && (
+                        <p id="terms-error" className="text-red-600 text-sm ml-7" role="alert">
+                            Você deve aceitar os termos para continuar.
+                        </p>
+                    )}
+
                     <div>
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={loading || !acceptedTerms}
                             className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? 'Cadastrando...' : 'Cadastrar'}
