@@ -21,6 +21,8 @@ export default function Billing() {
     const [error, setError] = useState('');
     const [upgradeLoading, setUpgradeLoading] = useState(false);
     const [upgradeError, setUpgradeError] = useState('');
+    const [portalLoading, setPortalLoading] = useState(false);
+    const [portalError, setPortalError] = useState('');
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
     // Set navigate for global 401 redirect
@@ -126,6 +128,48 @@ export default function Billing() {
         }
     };
 
+    const handleManageSubscription = async () => {
+        if (portalLoading || usage?.plan !== 'pro') return;
+
+        setPortalLoading(true);
+        setPortalError('');
+
+        try {
+            // Backend route is /billing/portal (reverse proxy handles routing)
+            const res = await api.post('/billing/portal', {});
+
+            if (!res.ok) {
+                let errorMessage = `Error ${res.status}: ${res.statusText}`;
+                try {
+                    const errorData = await safeJson<{ message?: string }>(res);
+                    if (errorData && typeof errorData === 'object' && 'message' in errorData) {
+                        errorMessage = String(errorData.message);
+                    }
+                } catch (parseErr) {
+                    if (parseErr instanceof Error) {
+                        errorMessage = parseErr.message;
+                    }
+                }
+                throw new Error(errorMessage);
+            }
+
+            const data = await safeJson<{ url: string }>(res);
+
+            // Redirect to Stripe Customer Portal
+            if (data.url) {
+                window.location.href = data.url;
+            }
+        } catch (err) {
+            if (err instanceof Error && err.message !== 'Unauthorized - redirected to login') {
+                setPortalError(err.message);
+                // Also show as toast
+                setToast({ message: err.message, type: 'error' });
+            }
+        } finally {
+            setPortalLoading(false);
+        }
+    };
+
     const formatDate = (dateString: string): string => {
         if (!dateString || dateString.trim() === '') {
             return 'Sem data de renovação';
@@ -198,7 +242,7 @@ export default function Billing() {
                                     <span> {formatDate(usage.period_end)}</span>
                                 </p>
                             </div>
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 flex-wrap">
                                     <span className="text-sm font-medium text-gray-500">Upgrade para:</span>
                                     <span className="px-3 py-1 bg-indigo-100 text-indigo-700 font-medium rounded-full text-sm">
                                         Pro
@@ -211,6 +255,15 @@ export default function Billing() {
                                     >
                                         {upgradeLoading ? 'Redirecionando...' : usage.plan === 'pro' ? 'Já é Pro' : 'Fazer Upgrade para Pro'}
                                     </button>
+                                    {usage.plan === 'pro' && (
+                                        <button
+                                            onClick={handleManageSubscription}
+                                            disabled={portalLoading}
+                                            className="px-6 py-2 bg-gray-600 text-white font-medium rounded-md hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                                        >
+                                            {portalLoading ? 'Redirecionando...' : 'Gerenciar Assinatura'}
+                                        </button>
+                                    )}
                                 </div>
                         </div>
                     </div>
