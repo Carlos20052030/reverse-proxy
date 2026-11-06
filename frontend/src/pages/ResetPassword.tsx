@@ -19,6 +19,10 @@ export default function ResetPassword() {
 
     const handleResetPassword = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Prevent double submit
+        if (loading) return;
+
         clearErrors();
 
         // Client-side validation
