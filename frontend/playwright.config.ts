@@ -70,6 +70,14 @@ export default defineConfig({
     // },
   ],
 
+  /* Start dev server before tests */
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:5173',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120000,
+  },
+
   /* Global teardown to clean up Docker containers after tests */
   globalTeardown: './tests/global-teardown',
 });
