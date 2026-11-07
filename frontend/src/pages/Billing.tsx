@@ -4,7 +4,7 @@ import api, { safeJson } from '../lib/api';
 
 interface UsageData {
     plan: 'free' | 'pro';
-    period_end: string;
+    subscription_ends_at: string | null;
     requests: { used: number; limit: number };
     webhooks: { used: number; limit: number };
 }
@@ -236,7 +236,7 @@ export default function Billing() {
                                 </div>
                                 <p className="text-sm text-gray-500 mt-1">
                                     <span>Fim do período:</span>
-                                    <span> {formatDate(usage.period_end)}</span>
+                                    <span> {formatDate(usage.subscription_ends_at)}</span>
                                 </p>
                             </div>
                             <div className="flex items-center gap-4 flex-wrap">
