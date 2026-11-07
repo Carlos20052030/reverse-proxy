@@ -268,7 +268,7 @@ export default function LandingPage() {
             <div className="text-center mt-12">
               <p className="text-gray-600 dark:text-gray-400">
                 Precisa de mais volume ou recursos enterprise?
-                <Link to="/register" className="text-primary-600 dark:text-primary-400 font-medium hover:underline ml-2">
+                <Link to="/contato" className="text-primary-600 dark:text-primary-400 font-medium hover:underline ml-2">
                   Fale conosco
                 </Link>
               </p>
@@ -282,7 +282,7 @@ export default function LandingPage() {
             <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
               Pronto para começar?
             </h2>
-            <p className="text-lg text-primary-100 mb-8 max-w-xl mx-auto">
+            <p className="text-lg text-gray-300 mb-8 max-w-xl mx-auto">
               Junte-se a desenvolvedores que já confiam no Nuntix para suas APIs em produção.
             </p>
             <Link
@@ -325,7 +325,7 @@ export default function LandingPage() {
                   <li><a href="/about" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Sobre</a></li>
                   <li><a href="/blog" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Blog</a></li>
                   <li><a href="/careers" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Carreiras</a></li>
-                  <li><a href="/contact" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Contato</a></li>
+                  <li><Link to="/contato" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Contato</Link></li>
                 </ul>
               </div>
             </div>

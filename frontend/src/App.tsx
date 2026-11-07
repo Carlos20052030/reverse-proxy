@@ -10,6 +10,7 @@ import Webhooks from './pages/Webhooks';
 import Billing from './pages/Billing';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
+import Contact from './pages/Contact';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
 
@@ -27,6 +28,7 @@ function App() {
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/privacy" element={<Privacy />} />
+                    <Route path="/contato" element={<Contact />} />
                     <Route element={<ProtectedRoute />}>
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/api-keys" element={<ApiKeys />} />
