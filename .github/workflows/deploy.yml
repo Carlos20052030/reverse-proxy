@@ -72,8 +72,11 @@ jobs:
       - name: Start bookmarks-api backend
         run: |
           cd bookmarks-api
-          # Create external network required by docker-compose
-          docker network create bookmarks-api_default || true
+          # Create external network required by docker-compose with proper labels
+          docker network create \
+            --label com.docker.compose.network=default \
+            --label com.docker.compose.project=bookmarks-api \
+            bookmarks-api_default || true
           # Create .env file with required environment variables
           printf "POSTGRES_HOST=db\nPOSTGRES_USER=testuser\nPOSTGRES_PASSWORD=testpass\nPOSTGRES_DB=testdb\nPOSTGRES_PORT=5432\nJWT_SECRET=testsecret123456789012345678901234\nDISPATCHER_URL=http://localhost:8080\n" > .env
           docker compose up -d
