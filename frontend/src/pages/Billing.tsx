@@ -167,7 +167,7 @@ export default function Billing() {
         }
     };
 
-    const formatDate = (dateString: string): string => {
+    const formatDate = (dateString: string | null): string => {
         if (!dateString || dateString.trim() === '') {
             return 'Sem data de renovação';
         }
