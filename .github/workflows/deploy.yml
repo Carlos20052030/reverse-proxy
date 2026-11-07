@@ -72,6 +72,18 @@ jobs:
       - name: Start bookmarks-api backend
         run: |
           cd bookmarks-api
+          # Create external network required by docker-compose
+          docker network create bookmarks-api_default || true
+          # Create .env file with required environment variables
+          cat > .env <<'EOF'
+POSTGRES_HOST=db
+POSTGRES_USER=testuser
+POSTGRES_PASSWORD=testpass
+POSTGRES_DB=testdb
+POSTGRES_PORT=5432
+JWT_SECRET=testsecret123456789012345678901234
+DISPATCHER_URL=http://localhost:8080
+EOF
           docker compose up -d
           # Wait for health check
           for i in {1..60}; do
