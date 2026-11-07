@@ -75,15 +75,7 @@ jobs:
           # Create external network required by docker-compose
           docker network create bookmarks-api_default || true
           # Create .env file with required environment variables
-          cat > .env <<'EOF'
-POSTGRES_HOST=db
-POSTGRES_USER=testuser
-POSTGRES_PASSWORD=testpass
-POSTGRES_DB=testdb
-POSTGRES_PORT=5432
-JWT_SECRET=testsecret123456789012345678901234
-DISPATCHER_URL=http://localhost:8080
-EOF
+          printf "POSTGRES_HOST=db\nPOSTGRES_USER=testuser\nPOSTGRES_PASSWORD=testpass\nPOSTGRES_DB=testdb\nPOSTGRES_PORT=5432\nJWT_SECRET=testsecret123456789012345678901234\nDISPATCHER_URL=http://localhost:8080\n" > .env
           docker compose up -d
           # Wait for health check
           for i in {1..60}; do
