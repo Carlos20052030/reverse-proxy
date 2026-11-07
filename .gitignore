@@ -2,3 +2,5 @@
 proxy
 billing.test
 retention
+.claude/settings.local.json
+.claude/

@@ -42,10 +42,63 @@ jobs:
       - name: Run gosec
         run: gosec -confidence=high -severity=high ./...
 
+  e2e-tests:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    needs: [build, gosec]
+    if: success()
+    steps:
+      - name: Checkout reverse-proxy
+        uses: actions/checkout@v4
+
+      - name: Checkout bookmarks-api
+        uses: actions/checkout@v4
+        with:
+          repository: Carlos20052030/bookmarks-api
+          path: bookmarks-api
+          token: ${{ secrets.BACKEND_REPO_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Start bookmarks-api backend
+        run: |
+          cd bookmarks-api
+          docker compose up -d
+          # Wait for health check
+          for i in {1..60}; do
+            if curl -sf http://localhost:8081/health; then
+              echo "Backend is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend failed to start"
+          docker compose logs
+          exit 1
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: frontend
+
+      - name: Run Playwright E2E tests
+        run: npx playwright test
+        working-directory: frontend
+        env:
+          CI: true
+
   docker:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    needs: [build, gosec]
+    needs: [build, gosec, e2e-tests]
     if: success()
     steps:
       - name: Checkout code
