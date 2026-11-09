@@ -10,6 +10,7 @@ interface Webhook {
     status: 'active' | 'inactive';
     created_at: string;
     updated_at: string;
+    last_delivery_status?: 'succeeded' | 'failed' | 'pending' | 'queued' | 'in_flight' | 'dead' | null;
 }
 
 export default function Webhooks() {
@@ -158,6 +159,29 @@ export default function Webhooks() {
         );
     };
 
+    const getLastDeliveryStatusBadge = (status: Webhook['last_delivery_status']) => {
+        if (!status) {
+            return (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+                    Nenhuma entrega
+                </span>
+            );
+        }
+        const colors: Record<NonNullable<Webhook['last_delivery_status']>, string> = {
+            succeeded: 'bg-green-100 text-green-800',
+            failed: 'bg-red-100 text-red-800',
+            pending: 'bg-yellow-100 text-yellow-800',
+            queued: 'bg-blue-100 text-blue-800',
+            in_flight: 'bg-purple-100 text-purple-800',
+            dead: 'bg-red-100 text-red-800',
+        };
+        return (
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[status] || 'bg-gray-100 text-gray-800'}`}>
+                {status}
+            </span>
+        );
+    };
+
     return (
         <>
                 {/* Create Webhook Button */}
@@ -219,7 +243,7 @@ export default function Webhooks() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                {getStatusBadge(wh.status)}
+                                                {getLastDeliveryStatusBadge(wh.last_delivery_status)}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 {new Date(wh.created_at).toLocaleDateString('pt-BR', {

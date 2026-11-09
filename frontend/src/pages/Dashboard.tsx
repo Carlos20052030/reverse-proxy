@@ -15,7 +15,7 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
             Bem-vindo ao seu API Gateway
           </h1>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-gray-500 dark:text-gray-400">
             Gerencie suas APIs, monitore webhooks e controle o uso do seu plano.
           </p>
         </div>
