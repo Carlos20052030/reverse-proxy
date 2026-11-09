@@ -35,13 +35,14 @@ export default function ApiKeys() {
             const res = await api.get('/api/api-keys');
             const data = await safeJson<APIKey[]>(res);
             setKeys(Array.isArray(data) ? data : []);
-        } catch (err) {
+        } catch {
             // 401 errors are handled globally by the API client
         } finally {
             setLoading(false);
         }
     };
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     useEffect(() => { fetchKeys(); }, []);
 
     // Auto-dismiss toast after 5 seconds

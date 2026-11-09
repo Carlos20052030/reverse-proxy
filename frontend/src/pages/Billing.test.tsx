@@ -35,14 +35,14 @@ Object.defineProperty(window, 'location', {
 
 const mockUsageData = {
     plan: 'free',
-    period_end: '2024-12-31T23:59:59Z',
+    subscription_ends_at: '2024-12-31T23:59:59Z',
     requests: { used: 1500, limit: 10000 },
     webhooks: { used: 5, limit: 10 },
 };
 
 const mockUsageDataPro = {
     plan: 'pro',
-    period_end: '2024-12-31T23:59:59Z',
+    subscription_ends_at: '2024-12-31T23:59:59Z',
     requests: { used: 50000, limit: 1000000 },
     webhooks: { used: 25, limit: 100 },
 };

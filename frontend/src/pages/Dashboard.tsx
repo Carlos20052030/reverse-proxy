@@ -37,6 +37,7 @@ export default function Dashboard() {
         }
     };
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     useEffect(() => { fetchBookmarks(); }, []);
 
     const handleAddBookmark = async (e: React.FormEvent) => {

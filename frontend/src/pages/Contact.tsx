@@ -1,21 +1,50 @@
+import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 
+interface Toast {
+  message: string;
+  type: 'success' | 'error';
+}
+
 export default function Contact() {
-  const handleEmailSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const [toast, setToast] = useState<Toast | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    setToast(null);
+
     const formData = new FormData(e.currentTarget);
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
     const message = formData.get('message') as string;
 
-    const subject = encodeURIComponent(`Contato do site - ${name}`);
-    const body = encodeURIComponent(
-      `Nome: ${name}\nEmail: ${email}\n\nMensagem:\n${message}`
-    );
-    const mailtoLink = `mailto:contato@nuntix.com.br?subject=${subject}&body=${body}`;
-    window.location.href = mailtoLink;
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, message }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Falha ao enviar mensagem');
+      }
+
+      setToast({ message: 'Mensagem enviada com sucesso!', type: 'success' });
+      e.currentTarget.reset();
+    } catch (err) {
+      setToast({ message: err instanceof Error ? err.message : 'Erro ao enviar mensagem', type: 'error' });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  // Auto-dismiss toast after 5 seconds
+  if (toast) {
+    setTimeout(() => setToast(null), 5000);
+  }
 
   return (
     <>
@@ -54,10 +83,17 @@ export default function Contact() {
               </p>
             </div>
 
+            {/* Toast */}
+            {toast && (
+              <div className={`mb-6 p-4 rounded-md ${toast.type === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`} role="alert">
+                {toast.message}
+              </div>
+            )}
+
             {/* Contact Form */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-100 dark:border-gray-700 shadow-sm mb-8">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Enviar mensagem</h2>
-              <form onSubmit={handleEmailSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Nome *
@@ -67,6 +103,7 @@ export default function Contact() {
                     id="name"
                     name="name"
                     required
+                    autoComplete="name"
                     className="w-full px-4 py-3 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                     placeholder="Seu nome completo"
                   />
@@ -81,6 +118,7 @@ export default function Contact() {
                     id="email"
                     name="email"
                     required
+                    autoComplete="email"
                     className="w-full px-4 py-3 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                     placeholder="seu@email.com"
                   />
@@ -102,9 +140,10 @@ export default function Contact() {
 
                 <button
                   type="submit"
-                  className="w-full py-3 px-6 bg-primary-600 text-white rounded-xl font-semibold text-lg hover:bg-primary-700 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                  disabled={isSubmitting}
+                  className="w-full py-3 px-6 bg-primary-600 text-white rounded-xl font-semibold text-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 >
-                  Enviar Mensagem
+                  {isSubmitting ? 'Enviando...' : 'Enviar Mensagem'}
                 </button>
               </form>
             </div>

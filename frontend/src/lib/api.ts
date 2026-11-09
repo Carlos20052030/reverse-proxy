@@ -175,15 +175,17 @@ async function apiFetch(endpoint: string, options: RequestOptions = {}): Promise
         return apiFetch(endpoint, { ...options, _retry: true });
       } else {
         // Refresh failed - process queue with error and redirect to login
-        processQueue(new Error('Token refresh failed'));
+        const refreshError = new Error('Token refresh failed');
+        processQueue(refreshError);
         handleUnauthorized();
-        throw new Error('Unauthorized - redirected to login');
+        throw refreshError;
       }
     } catch (error) {
       // Any error during refresh - process queue with error and redirect
-      processQueue(error instanceof Error ? error : new Error('Token refresh failed'));
+      const refreshError = error instanceof Error ? error : new Error('Token refresh failed');
+      processQueue(refreshError);
       handleUnauthorized();
-      throw new Error('Unauthorized - redirected to login');
+      throw refreshError;
     } finally {
       isRefreshing = false;
     }

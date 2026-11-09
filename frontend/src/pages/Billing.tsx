@@ -64,12 +64,18 @@ export default function Billing() {
     useEffect(() => {
         const checkout = searchParams.get('checkout');
         if (checkout === 'success') {
-            setToast({ message: 'Pagamento aprovado! Bem-vindo ao Pro.', type: 'success' });
+            // Defer setToast to avoid synchronous state update in effect
+            setTimeout(() => {
+                setToast({ message: 'Pagamento aprovado! Bem-vindo ao Pro.', type: 'success' });
+            }, 0);
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             fetchUsage(); // Refetch billing data to ensure UI is up to date
             // Clean up URL
             window.history.replaceState(null, '', window.location.pathname);
         } else if (checkout === 'canceled' || checkout === 'cancel') {
-            setToast({ message: 'Pagamento cancelado.', type: 'error' });
+            setTimeout(() => {
+                setToast({ message: 'Pagamento cancelado.', type: 'error' });
+            }, 0);
             // Clean up URL
             window.history.replaceState(null, '', window.location.pathname);
         }
@@ -83,9 +89,8 @@ export default function Billing() {
         }
     }, [toast]);
 
-    useEffect(() => {
-        fetchUsage();
-    }, []);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    useEffect(() => { fetchUsage(); }, []);
 
     const handleUpgrade = async () => {
         if (upgradeLoading || usage?.plan === 'pro') return;

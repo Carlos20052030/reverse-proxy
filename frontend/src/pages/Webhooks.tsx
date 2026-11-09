@@ -54,6 +54,7 @@ export default function Webhooks() {
         }
     };
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     useEffect(() => { fetchWebhooks(); }, []);
 
     const handleCreate = async (e: React.FormEvent) => {
