@@ -13,10 +13,11 @@ export default function Contact() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const form = e.currentTarget;
     setIsSubmitting(true);
     setToast(null);
 
-    const formData = new FormData(e.currentTarget);
+    const formData = new FormData(form);
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
     const message = formData.get('message') as string;
@@ -33,7 +34,7 @@ export default function Contact() {
       }
 
       setToast({ message: 'Mensagem enviada com sucesso!', type: 'success' });
-      e.currentTarget.reset();
+      form.reset();
     } catch (err) {
       setToast({ message: err instanceof Error ? err.message : 'Erro ao enviar mensagem', type: 'error' });
     } finally {
