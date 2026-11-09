@@ -134,16 +134,6 @@ export default function Webhooks() {
         }
     };
 
-    const getStatusBadge = (status: Webhook['status']) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            status === 'active'
-                ? 'bg-green-100 text-green-800'
-                : 'bg-gray-100 text-gray-800'
-        }`}>
-            {status}
-        </span>
-    );
-
     const getDeliveryStatusBadge = (status: Delivery['status']) => {
         const colors: Record<Delivery['status'], string> = {
             succeeded: 'bg-green-100 text-green-800',
