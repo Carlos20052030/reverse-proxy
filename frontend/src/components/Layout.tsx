@@ -10,18 +10,18 @@ export function Layout() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <nav className="bg-white shadow-sm border-b border-gray-200">
+        <div className="min-h-screen bg-slate-50">
+            <nav className="bg-white shadow-sm border-b border-slate-200">
                 <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16 items-center">
                         <div className="flex items-center gap-4">
                             <Link
                                 to="/dashboard"
-                                className="text-sm font-medium text-gray-500 hover:text-gray-900"
+                                className="text-sm font-medium text-slate-500 hover:text-slate-900"
                             >
                                 Dashboard
                             </Link>
-                            <span className="text-gray-300">/</span>
+                            <span className="text-slate-300">/</span>
                             <Link
                                 to="/api-keys"
                                 className="text-sm font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1 rounded-md transition-colors"

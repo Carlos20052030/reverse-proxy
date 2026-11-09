@@ -208,7 +208,7 @@ export default function Billing() {
             )}
 
             <div className="mb-8">
-                <h1 className="text-2xl font-bold text-gray-900">Billing & Usage</h1>
+                <h1 className="text-2xl font-bold text-slate-900">Billing & Usage</h1>
             </div>
 
             {error && (
@@ -224,28 +224,28 @@ export default function Billing() {
             )}
 
             {loading ? (
-                <p className="text-gray-500">Carregando informações de faturamento...</p>
+                <p className="text-slate-500">Carregando informações de faturamento...</p>
             ) : usage ? (
                 <>
-                    <div className="bg-white rounded-xl shadow-sm p-6 mb-8 border border-gray-200">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4">Plano Atual</h2>
+                    <div className="bg-white rounded-xl shadow-sm p-6 mb-8 border border-slate-200">
+                        <h2 className="text-lg font-semibold text-slate-800 mb-4">Plano Atual</h2>
                         <div className="flex items-center gap-4">
                             <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-gray-500">Plano:</span>
+                                    <span className="text-sm font-medium text-slate-500">Plano:</span>
                                     <span className={`text-lg font-semibold ${
-                                        usage.plan === 'pro' ? 'text-green-700' : 'text-gray-900'
+                                        usage.plan === 'pro' ? 'text-green-700' : 'text-slate-900'
                                     }`}>
                                         {usage.plan === 'pro' ? 'Pro' : 'Free'}
                                     </span>
                                 </div>
-                                <p className="text-sm text-gray-500 mt-1">
+                                <p className="text-sm text-slate-500 mt-1">
                                     <span>Fim do período:</span>
                                     <span> {formatDate(usage.subscription_ends_at)}</span>
                                 </p>
                             </div>
                             <div className="flex items-center gap-4 flex-wrap">
-                                    <span className="text-sm font-medium text-gray-500">Upgrade para:</span>
+                                    <span className="text-sm font-medium text-slate-500">Upgrade para:</span>
                                     <span className="px-3 py-1 bg-indigo-100 text-indigo-700 font-medium rounded-full text-sm">
                                         Pro
                                     </span>
@@ -261,7 +261,7 @@ export default function Billing() {
                                         <button
                                             onClick={handleManageSubscription}
                                             disabled={portalLoading}
-                                            className="px-6 py-2 bg-gray-600 text-white font-medium rounded-md hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                                            className="px-6 py-2 bg-slate-600 text-white font-medium rounded-md hover:bg-slate-700 disabled:opacity-50 transition-colors"
                                         >
                                             {portalLoading ? 'Redirecionando...' : 'Gerenciar Assinatura'}
                                         </button>
@@ -272,15 +272,15 @@ export default function Billing() {
 
                     <div className="grid gap-6 md:grid-cols-2">
                         {/* Requests Usage */}
-                        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Requisições</h3>
+                        <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                            <h3 className="text-lg font-semibold text-slate-800 mb-4">Requisições</h3>
                             <div className="mb-2 flex justify-between text-sm">
-                                <span className="text-gray-500">Usado</span>
-                                <span className="font-medium text-gray-900">
+                                <span className="text-slate-500">Usado</span>
+                                <span className="font-medium text-slate-900">
                                     {formatNumber(usage.requests.used)} / {formatNumber(usage.requests.limit)}
                                 </span>
                             </div>
-                            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
                                 <div
                                     role="progressbar"
                                     aria-label="Requisições"
@@ -294,15 +294,15 @@ export default function Billing() {
                         </div>
 
                         {/* Webhooks Usage */}
-                        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Webhooks</h3>
+                        <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                            <h3 className="text-lg font-semibold text-slate-800 mb-4">Webhooks</h3>
                             <div className="mb-2 flex justify-between text-sm">
-                                <span className="text-gray-500">Usado</span>
-                                <span className="font-medium text-gray-900">
+                                <span className="text-slate-500">Usado</span>
+                                <span className="font-medium text-slate-900">
                                     {formatNumber(usage.webhooks.used)} / {formatNumber(usage.webhooks.limit)}
                                 </span>
                             </div>
-                            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
                                 <div
                                     role="progressbar"
                                     aria-label="Webhooks"
@@ -317,7 +317,7 @@ export default function Billing() {
                     </div>
                 </>
             ) : (
-                <p className="text-gray-500">Nenhuma informação de faturamento disponível.</p>
+                <p className="text-slate-500">Nenhuma informação de faturamento disponível.</p>
             )}
         </>
     );
