@@ -194,15 +194,15 @@ export default function Contact() {
                   <li><Link to="/" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Início</Link></li>
                   <li><a href="#features" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Funcionalidades</a></li>
                   <li><a href="#pricing" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Preços</a></li>
-                  <li><a href="/docs" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Documentação</a></li>
+                  <li><Link to="/docs" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Documentação</Link></li>
                 </ul>
               </div>
               <div>
                 <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Empresa</h4>
                 <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                  <li><a href="/about" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Sobre</a></li>
-                  <li><a href="/blog" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Blog</a></li>
-                  <li><a href="/careers" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Carreiras</a></li>
+                  <li><Link to="/about" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Sobre</Link></li>
+                  <li><Link to="/blog" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Blog</Link></li>
+                  <li><Link to="/careers" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Carreiras</Link></li>
                   <li><Link to="/contato" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Contato</Link></li>
                 </ul>
               </div>
@@ -214,7 +214,7 @@ export default function Contact() {
               <div className="flex items-center gap-6">
                 <Link to="/privacy" className="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Privacidade</Link>
                 <Link to="/terms" className="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Termos</Link>
-                <a href="/cookies" className="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Cookies</a>
+                <Link to="/cookies" className="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Cookies</Link>
               </div>
             </div>
           </div>

@@ -11,6 +11,7 @@ import Billing from './pages/Billing';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import Contact from './pages/Contact';
+import ComingSoon from './pages/ComingSoon';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
 
@@ -29,6 +30,12 @@ function App() {
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/privacy" element={<Privacy />} />
                     <Route path="/contato" element={<Contact />} />
+                    <Route path="/about" element={<ComingSoon />} />
+                    <Route path="/blog" element={<ComingSoon />} />
+                    <Route path="/careers" element={<ComingSoon />} />
+                    <Route path="/docs" element={<ComingSoon />} />
+                    <Route path="/changelog" element={<ComingSoon />} />
+                    <Route path="/cookies" element={<ComingSoon />} />
                     <Route element={<ProtectedRoute />}>
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/api-keys" element={<ApiKeys />} />
