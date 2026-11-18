@@ -40,6 +40,12 @@ export function Layout() {
                             >
                                 Faturamento
                             </Link>
+                            <Link
+                                to="/docs"
+                                className="text-sm font-medium text-slate-500 hover:text-slate-900"
+                            >
+                                Documentação
+                            </Link>
                         </div>
                         <button
                             onClick={handleLogout}

@@ -32,6 +32,7 @@ const mockWebhooks = [
         status: 'active',
         created_at: '2024-01-15T10:30:00Z',
         updated_at: '2024-01-15T10:30:00Z',
+        last_delivery_status: 'succeeded',
     },
     {
         id: 'wh_2',
@@ -41,6 +42,7 @@ const mockWebhooks = [
         status: 'active',
         created_at: '2024-02-20T14:45:00Z',
         updated_at: '2024-02-20T14:45:00Z',
+        last_delivery_status: 'pending',
     },
     {
         id: 'wh_3',
@@ -50,6 +52,7 @@ const mockWebhooks = [
         status: 'inactive',
         created_at: '2023-11-10T09:15:00Z',
         updated_at: '2024-01-05T16:20:00Z',
+        last_delivery_status: null,
     },
 ];
 
@@ -178,7 +181,7 @@ describe('Webhooks Page - Loading & Display', () => {
         expect(screen.getByText('release')).toBeInTheDocument();
     });
 
-    it('displays status badges correctly', async () => {
+    it('displays last delivery status badges correctly', async () => {
         mockFetchSuccess(mockWebhooks);
         renderWithRouter();
 
@@ -186,12 +189,12 @@ describe('Webhooks Page - Loading & Display', () => {
             expect(screen.queryByText('Carregando webhooks...')).not.toBeInTheDocument();
         });
 
-        // Active badges (green)
-        const activeBadges = screen.getAllByText('active');
-        expect(activeBadges).toHaveLength(2);
-
-        // Inactive badge (gray)
-        expect(screen.getByText('inactive')).toBeInTheDocument();
+        // wh_1 has last_delivery_status: 'succeeded' (green)
+        expect(screen.getByText('succeeded')).toBeInTheDocument();
+        // wh_2 has last_delivery_status: 'pending' (yellow)
+        expect(screen.getByText('pending')).toBeInTheDocument();
+        // wh_3 has last_delivery_status: null, shows "Nenhuma entrega"
+        expect(screen.getByText('Nenhuma entrega')).toBeInTheDocument();
     });
 
     it('shows error message when fetch fails', async () => {
