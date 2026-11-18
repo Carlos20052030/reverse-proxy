@@ -14,10 +14,10 @@ export default function Docs() {
       <div className="max-w-4xl mx-auto space-y-12">
         {/* Header */}
         <header className="text-center py-12">
-          <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">
+          <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4" style={{ color: '#0f172a' }}>
             Documentação da API
           </h1>
-          <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
+          <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto" style={{ color: '#475569' }}>
             Bem-vindo à documentação da API Nuntix. Aqui você encontra tudo o que precisa para integrar
             com nossa API de gerenciamento de bookmarks, API Keys e Webhooks.
           </p>
