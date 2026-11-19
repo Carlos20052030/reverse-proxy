@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import { Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -13,10 +13,9 @@ import Privacy from './pages/Privacy';
 import Contact from './pages/Contact';
 import Docs from './pages/Docs';
 import ComingSoon from './pages/ComingSoon';
+import LandingPage from './pages/LandingPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
-
-const LandingPage = React.lazy(() => import('./pages/LandingPage'));
 
 function App() {
     return (
