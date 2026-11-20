@@ -60,6 +60,10 @@ export default function Register() {
                 if (data.refresh_token) {
                     localStorage.setItem('refresh_token', data.refresh_token);
                 }
+                // Save raw API key to sessionStorage if provided by backend
+                if (data.raw_api_key) {
+                    sessionStorage.setItem('new_api_key', data.raw_api_key);
+                }
                 setToast({ message: 'Conta criada com sucesso!', type: 'success' });
 
                 // Small delay to show success toast before redirect
@@ -145,13 +149,13 @@ export default function Register() {
                         />
                         <label htmlFor="acceptedTerms" className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                             Eu concordo com os{' '}
-                            <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-500 underline font-medium">
+                            <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-500 underline font-medium">
                                 Termos de Uso
-                            </Link>{' '}
+                            </a>{' '}
                             e{' '}
-                            <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-500 underline font-medium">
+                            <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-500 underline font-medium">
                                 Política de Privacidade
-                            </Link>
+                            </a>
                         </label>
                     </div>
                     {termsError && (

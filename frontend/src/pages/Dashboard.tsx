@@ -21,14 +21,55 @@ interface DashboardMetrics {
     subscriptionEndsAt: string | null;
 }
 
+interface Toast {
+    message: string;
+    type: 'success' | 'error';
+}
+
 export default function Dashboard() {
     const navigate = useNavigate();
     const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [toast, setToast] = useState<Toast | null>(null);
+    const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+    const [newApiKey, setNewApiKey] = useState<string | null>(null);
+
+    // Check for new API key in sessionStorage on mount
+    useEffect(() => {
+        const storedKey = sessionStorage.getItem('new_api_key');
+        if (storedKey) {
+            setNewApiKey(storedKey);
+            setShowApiKeyModal(true);
+        }
+    }, []);
 
     // Set navigate for global 401 redirect
     api.setNavigate(navigate);
+
+    const closeApiKeyModal = () => {
+        setShowApiKeyModal(false);
+        setNewApiKey(null);
+        sessionStorage.removeItem('new_api_key');
+    };
+
+    const copyApiKey = async () => {
+        if (!newApiKey) return;
+        try {
+            await navigator.clipboard.writeText(newApiKey);
+            setToast({ message: 'Chave copiada para a área de transferência!', type: 'success' });
+        } catch {
+            setToast({ message: 'Erro ao copiar a chave.', type: 'error' });
+        }
+    };
+
+    // Auto-dismiss toast after 5 seconds
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [toast]);
 
     const fetchMetrics = async () => {
         try {
@@ -114,6 +155,57 @@ export default function Dashboard() {
                 <title>Dashboard — Nuntix</title>
                 <meta name="description" content="Painel do seu API Gateway e Webhook Dispatcher" />
             </Helmet>
+
+            {/* New API Key Modal */}
+            {showApiKeyModal && newApiKey && (
+                <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="api-key-modal-title">
+                    <div className="flex min-h-full items-center justify-center p-4">
+                        <div className="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+                        <div className="relative w-full max-w-md bg-white rounded-xl shadow-xl p-6 border border-slate-200">
+                            <h3 id="api-key-modal-title" className="text-lg font-semibold text-slate-900 mb-2">
+                                Sua API Key foi gerada!
+                            </h3>
+                            <p className="text-slate-600 mb-4 text-sm">
+                                Você não poderá ver esta chave novamente. Copie-a agora.
+                            </p>
+                            <div className="mb-4">
+                                <input
+                                    type="text"
+                                    readOnly
+                                    value={newApiKey}
+                                    className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-md text-slate-900 font-mono text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                                    aria-label="Sua nova API Key"
+                                />
+                            </div>
+                            <div className="flex justify-end gap-3">
+                                <button
+                                    onClick={copyApiKey}
+                                    className="px-4 py-2 bg-primary-600 text-white font-medium rounded-md hover:bg-primary-700 transition-colors flex items-center gap-2"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                    Copiar Chave
+                                </button>
+                                <button
+                                    onClick={closeApiKeyModal}
+                                    className="px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-md hover:bg-slate-200 transition-colors"
+                                >
+                                    Entendi, Fechar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {toast && (
+                <div className={`fixed top-4 right-4 z-50 p-4 rounded-md shadow-lg ${
+                    toast.type === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'
+                }`} role="alert">
+                    {toast.message}
+                </div>
+            )}
 
             <div className="space-y-8">
                 {/* Welcome Section */}
